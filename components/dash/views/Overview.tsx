@@ -26,7 +26,9 @@ export function Overview() {
 
   const rev = useMemo(() => revenueByDay(state, 14), [state]);
   const todayRev = sumRange(state, 0);
-  const sameDayLastWeek = sumRange(state, 7, 7);
+  const weekAgo = Date.now() - 7 * 864e5;
+  const weekAgoStart = new Date(weekAgo).setHours(0, 0, 0, 0);
+  const sameDayLastWeek = state.transactions.filter((t) => t.status === "paid" && t.at >= weekAgoStart && t.at <= weekAgo).reduce((a, t) => a + t.amount, 0);
   const todays = state.bookings.filter((b) => b.date === today && b.status !== "cancelled");
   const lastWeekCount = state.bookings.filter((b) => b.date === ymd(new Date(Date.now() - 7 * 864e5)) && b.status !== "cancelled").length;
   const live = state.courts.filter((c) => c.status === "play").length;
@@ -74,7 +76,7 @@ export function Overview() {
       </section>
 
       <div className="grid g-4">
-        <Kpi label="Revenue today" value={money(todayRev)} delta={sameDayLastWeek ? ((todayRev - sameDayLastWeek) / sameDayLastWeek) * 100 : undefined} hint="vs same day last week" icon={<IconWallet size={20} />} />
+        <Kpi label="Revenue today" value={money(todayRev)} delta={sameDayLastWeek ? ((todayRev - sameDayLastWeek) / sameDayLastWeek) * 100 : undefined} hint="vs this time last week" icon={<IconWallet size={20} />} />
         <Kpi label="Bookings today" value={todays.length} delta={lastWeekCount ? ((todays.length - lastWeekCount) / lastWeekCount) * 100 : undefined} hint="vs last week" icon={<IconCalendar size={20} />} />
         <Kpi
           label="Courts in use"

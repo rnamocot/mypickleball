@@ -2039,3 +2039,47 @@ button.card {
   text-decoration: line-through;
   color: var(--dim);
 }
+
+/* shell fixes: scrim only exists on small screens; side-close/menu-toggle hidden on desktop */
+.scrim {
+  display: none;
+}
+.icon-btn.side-close,
+.icon-btn.menu-toggle {
+  display: none;
+}
+@media (max-width: 1024px) {
+  .scrim {
+    display: block;
+  }
+  .icon-btn.side-close,
+  .icon-btn.menu-toggle {
+    display: inline-grid;
+  }
+}
+.grid {
+  align-items: start;
+}
+.grid.g-4 {
+  align-items: stretch;
+}
+.top-search {
+  min-width: 0;
+}
+.top-search input {
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .top-right {
+    gap: 6px;
+  }
+  .dcontent,
+  .dmain {
+    overflow-x: clip;
+  }
+}
+@media (max-width: 480px) {
+  .top-user {
+    display: none;
+  }
+}

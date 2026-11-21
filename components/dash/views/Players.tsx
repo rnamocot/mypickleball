@@ -78,7 +78,7 @@ export function Players() {
               { value: "balance", label: "Owes balance", count: state.players.filter((p) => p.balance > 0).length },
             ]}
           />
-          <div style={{ display: "flex", gap: 8, paddingBottom: 8 }}>
+          <div style={{ display: "flex", gap: 8, paddingBottom: 8, flexWrap: "wrap", maxWidth: "100%" }}>
             <SearchInput value={q} onChange={setQ} placeholder="Search name, email, phone" />
             <select className="select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort players">
               <option value="recent">Recent visit</option>

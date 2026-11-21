@@ -18,7 +18,15 @@ export function BookingModal({
 }) {
   const { state, dispatch } = useStore();
   const s = state.settings;
-  const [courtId, setCourtId] = useState(preset?.courtId ?? state.courts[0]?.id);
+  const [courtId, setCourtId] = useState(() => {
+    if (preset?.courtId) return preset.courtId;
+    const d = preset?.date ?? ymd(new Date());
+    const st = preset?.start ?? 18 * 60;
+    const free = state.courts.find(
+      (c) => c.status !== "maintenance" && !state.bookings.some((b) => b.courtId === c.id && b.date === d && b.status !== "cancelled" && b.start < st + 60 && st < b.start + b.duration),
+    );
+    return free?.id ?? state.courts[0]?.id;
+  });
   const [date, setDate] = useState(preset?.date ?? ymd(new Date()));
   const [start, setStart] = useState(preset?.start ?? 18 * 60);
   const [duration, setDuration] = useState(60);

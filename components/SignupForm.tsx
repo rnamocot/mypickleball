@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { IconArrow, IconCheck } from "./Icons";
 
 export function SignupForm({ signin, plan }: { signin: boolean; plan?: string }) {
   const [done, setDone] = useState(false);
+  const router = useRouter();
 
   if (done)
     return (
@@ -15,7 +17,7 @@ export function SignupForm({ signin, plan }: { signin: boolean; plan?: string })
         </span>
         <h2 className="h3">{signin ? "Welcome back." : "Your club is warming up."}</h2>
         <p className="lead" style={{ marginTop: 14, fontSize: 16 }}>
-          The MyPickleball dashboard is coming in the next release. We&apos;ll email you the moment your club is ready.
+          Opening your club dashboard. We loaded a sample club so you can try every feature.
         </p>
       </div>
     );
@@ -25,6 +27,7 @@ export function SignupForm({ signin, plan }: { signin: boolean; plan?: string })
       onSubmit={(e) => {
         e.preventDefault();
         setDone(true);
+        setTimeout(() => router.push("/dashboard"), 1200);
       }}
       style={{ display: "grid", gap: 16 }}
     >
