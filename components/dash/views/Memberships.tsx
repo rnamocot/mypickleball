@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { IconCheck, IconMembership, IconPlus, IconWallet } from "../../Icons";
-import { type Plan, addDays, fmtDate, money, parseYmd, uid, ymd } from "../data";
+import { type Plan, addDays, fmtDate, money, parseYmd, stamp, uid, ymd } from "../data";
 import { useStore } from "../store";
 import { Avatar, Field, Kpi, Modal, PageHead, Panel, Status, Tabs, type Tone } from "../ui";
 
@@ -24,18 +24,18 @@ export function Memberships() {
   const state_ = (renews: string | null): [Tone, string] =>
     !renews ? ["idle", "None"] : renews < today ? ["bad", "Past due"] : renews <= in7 ? ["warn", "Renews soon"] : ["good", "Active"];
 
-  const list = useMemo(() => {
+  const list = (() => {
     let l = members;
     if (f === "soon") l = l.filter((p) => p.renewsOn! >= today && p.renewsOn! <= in7);
     if (f === "due") l = l.filter((p) => p.renewsOn! < today);
     return [...l].sort((a, b) => (a.renewsOn ?? "").localeCompare(b.renewsOn ?? ""));
-  }, [members, f, today, in7]);
+  })();
 
   const renew = (pid: string) => {
     const p = state.players.find((x) => x.id === pid)!;
     const pl = state.plans.find((x) => x.id === p.planId)!;
     const base = p.renewsOn && p.renewsOn > today ? parseYmd(p.renewsOn) : new Date();
-    dispatch({ t: "addTx", tx: { id: uid("t"), at: Date.now(), playerId: p.id, description: `${pl.name} membership`, category: "Membership", amount: pl.price, method: "Card", status: "paid" } });
+    dispatch({ t: "addTx", tx: { id: uid("t"), at: stamp(), playerId: p.id, description: `${pl.name} membership`, category: "Membership", amount: pl.price, method: "Card", status: "paid" } });
     dispatch({ t: "updatePlayer", id: p.id, patch: { renewsOn: ymd(addDays(base, pl.interval === "month" ? 30 : 365)) } });
   };
 

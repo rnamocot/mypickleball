@@ -18,38 +18,68 @@ export function BookingModal({
 }) {
   const { state, dispatch } = useStore();
   const s = state.settings;
-  const [courtId, setCourtId] = useState(() => {
-    if (preset?.courtId) return preset.courtId;
+  const isFree = (courtId: string, d: string, st: number) =>
+    !state.bookings.some((b) => b.courtId === courtId && b.date === d && b.status !== "cancelled" && b.start < st + 60 && st < b.start + b.duration);
+
+  /** First open court at or after the preferred time (wrapping to earlier in the day if needed). */
+  const firstFree = (d: string, preferred: number) => {
+    const usable = state.courts.filter((c) => c.status !== "maintenance");
+    const slots: number[] = [];
+    for (let m = s.open; m <= s.close - 60; m += 30) slots.push(m);
+    const ordered = [...slots.filter((m) => m >= preferred), ...slots.filter((m) => m < preferred)];
+    for (const m of ordered) {
+      const c = usable.find((x) => isFree(x.id, d, m));
+      if (c) return { courtId: c.id, start: m };
+    }
+    return { courtId: state.courts[0]?.id ?? "", start: preferred };
+  };
+
+  const initial = () => {
     const d = preset?.date ?? ymd(new Date());
-    const st = preset?.start ?? 18 * 60;
-    const free = state.courts.find(
-      (c) => c.status !== "maintenance" && !state.bookings.some((b) => b.courtId === c.id && b.date === d && b.status !== "cancelled" && b.start < st + 60 && st < b.start + b.duration),
-    );
-    return free?.id ?? state.courts[0]?.id;
-  });
-  const [date, setDate] = useState(preset?.date ?? ymd(new Date()));
-  const [start, setStart] = useState(preset?.start ?? 18 * 60);
+    if (preset?.courtId && preset.start !== undefined) return { courtId: preset.courtId, date: d, start: preset.start };
+    const n = new Date();
+    const soon = d === ymd(n) ? Math.ceil((n.getHours() * 60 + n.getMinutes()) / 30) * 30 : 18 * 60;
+    const pick = firstFree(d, preset?.start ?? Math.max(soon, s.open));
+    return { ...pick, date: d };
+  };
+
+  const [init] = useState(initial);
+  const [courtId, setCourtId] = useState(init.courtId);
+  const [date, setDate] = useState(init.date);
+  const [start, setStart] = useState(init.start);
   const [duration, setDuration] = useState(60);
   const [type, setType] = useState<BookingType>("Court");
   const [playerId, setPlayerId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [paid, setPaid] = useState(true);
+  const [priceText, setPriceText] = useState("");
 
-  // keep in sync when reopened with a new preset
+  // Start fresh every time the modal opens (and follow a new slot preset).
   const key = `${preset?.courtId}-${preset?.date}-${preset?.start}-${open}`;
   const [lastKey, setLastKey] = useState(key);
   if (key !== lastKey) {
     setLastKey(key);
-    if (preset?.courtId) setCourtId(preset.courtId);
-    if (preset?.date) setDate(preset.date);
-    if (preset?.start !== undefined) setStart(preset.start);
+    if (open) {
+      const next = initial();
+      setDate(next.date);
+      setStart(next.start);
+      setCourtId(next.courtId);
+      setDuration(60);
+      setType("Court");
+      setPlayerId("");
+      setTitle("");
+      setPaid(true);
+      setPriceText("");
+    }
   }
 
   const player = state.players.find((p) => p.id === playerId);
   const plan = state.plans.find((p) => p.id === player?.planId);
   const peak = start >= s.peakStart && start < s.peakEnd;
-  const base = type === "Court" ? (peak ? s.peakPrice : s.offPeakPrice) * (duration / 60) : type === "Lesson" ? 80 : type === "Clinic" ? 30 : type === "League" ? 20 : 180;
-  const price = Math.round(base * (1 - (type === "Court" && plan ? plan.courtDiscount / 100 : 0)));
+  const base =
+    type === "Court" ? (peak ? s.peakPrice : s.offPeakPrice) * (duration / 60) : type === "Lesson" ? 80 * (duration / 60) : type === "Clinic" ? 30 : type === "League" ? 20 : 180;
+  const suggested = Math.round(base * (1 - (type === "Court" && plan ? plan.courtDiscount / 100 : 0)));
+  const price = priceText.trim() !== "" && !Number.isNaN(Number(priceText)) ? Math.max(0, Number(priceText)) : suggested;
 
   const conflict = useMemo(
     () =>
@@ -152,7 +182,10 @@ export function BookingModal({
               ))}
           </select>
         </Field>
-        <Field label="Title (optional)" full>
+        <Field label="Price" hint={priceText ? `Suggested ${money(suggested)}` : "Suggested from your rates. Type to override."}>
+          <input inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value.replace(/[^\d.]/g, ""))} placeholder={String(suggested)} />
+        </Field>
+        <Field label="Title (optional)">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Rivera doubles" />
         </Field>
         <label className="switch-row dfield full" style={{ borderBottom: 0, padding: 0 }}>

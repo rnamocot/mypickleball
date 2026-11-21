@@ -5,23 +5,34 @@ import { type Settings as S, fmtTime, money } from "../data";
 import { useStore } from "../store";
 import { Field, Modal, PageHead, Panel } from "../ui";
 
-export function Settings() {
-  const { state, dispatch } = useStore();
-  const [draft, setDraft] = useState<S>(state.settings);
-  const [resetting, setResetting] = useState(false);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(state.settings);
-  const set = <K extends keyof S>(k: K, v: S[K]) => setDraft((d) => ({ ...d, [k]: v }));
-  const times: number[] = [];
-  for (let m = 0; m <= 24 * 60; m += 30) times.push(m);
-  const TimeSel = ({ k }: { k: "open" | "close" | "peakStart" | "peakEnd" }) => (
-    <select value={draft[k]} onChange={(e) => set(k, Number(e.target.value))}>
-      {times.map((m) => (
+type TimeKey = "open" | "close" | "peakStart" | "peakEnd";
+const TIMES = Array.from({ length: 49 }, (_, i) => i * 30);
+
+function TimeSel({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(Number(e.target.value))}>
+      {TIMES.map((m) => (
         <option key={m} value={m}>
           {m === 24 * 60 ? "Midnight" : fmtTime(m)}
         </option>
       ))}
     </select>
   );
+}
+
+export function Settings() {
+  const { state, dispatch } = useStore();
+  const [draft, setDraft] = useState<S>(state.settings);
+  // When saved settings change (save, reset demo, or the open play page), start the form from them.
+  const [base, setBase] = useState(state.settings);
+  if (state.settings !== base) {
+    setBase(state.settings);
+    setDraft(state.settings);
+  }
+  const [resetting, setResetting] = useState(false);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(state.settings);
+  const set = <K extends keyof S>(k: K, v: S[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const time = (k: TimeKey) => <TimeSel value={draft[k]} onChange={(v) => set(k, v)} />;
 
   return (
     <>
@@ -55,14 +66,7 @@ export function Settings() {
               <Field label="Club name">
                 <input value={draft.clubName} onChange={(e) => set("clubName", e.target.value)} />
               </Field>
-              <Field label="Time zone">
-                <select value={draft.timezone} onChange={(e) => set("timezone", e.target.value)}>
-                  {["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "Pacific/Honolulu"].map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Address" full>
+              <Field label="Address">
                 <input value={draft.address} onChange={(e) => set("address", e.target.value)} />
               </Field>
             </div>
@@ -71,16 +75,16 @@ export function Settings() {
           <Panel title="Hours & pricing">
             <div className="form" id="hours">
               <Field label="Opens">
-                <TimeSel k="open" />
+                {time("open")}
               </Field>
               <Field label="Closes">
-                <TimeSel k="close" />
+                {time("close")}
               </Field>
               <Field label="Peak starts">
-                <TimeSel k="peakStart" />
+                {time("peakStart")}
               </Field>
               <Field label="Peak ends">
-                <TimeSel k="peakEnd" />
+                {time("peakEnd")}
               </Field>
               <Field label="Peak court rate (per hour)">
                 <input type="number" min={0} value={draft.peakPrice} onChange={(e) => set("peakPrice", Number(e.target.value))} />

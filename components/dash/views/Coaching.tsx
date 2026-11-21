@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { IconPlus } from "../../Icons";
 import { type Lesson, addDays, fmtDate, fmtTime, money, uid, ymd } from "../data";
 import { PlayerPicker } from "../modals";
@@ -17,7 +17,7 @@ export function Coaching() {
   const weekEnd = ymd(addDays(new Date(), 6));
   const week = state.lessons.filter((l) => l.date >= today && l.date <= weekEnd);
   const shown = week.filter((l) => coach === "all" || l.coachId === coach).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
-  const days = useMemo(() => Array.from(new Set(shown.map((l) => l.date))), [shown]);
+  const days = Array.from(new Set(shown.map((l) => l.date)));
 
   const statsFor = (id: string) => {
     const ls = week.filter((l) => l.coachId === id);

@@ -14,8 +14,12 @@ import {
   type Staff,
   type State,
   type Transaction,
+  DATA_VERSION,
+  addDays,
+  parseYmd,
   seed,
   uid,
+  ymd,
 } from "./data";
 
 const KEY = "mypickleball-demo-v1";
@@ -23,6 +27,7 @@ const KEY = "mypickleball-demo-v1";
 type Action =
   | { t: "load"; state: State }
   | { t: "reset" }
+  | { t: "undo" }
   | { t: "notice"; text: string; tone?: Notice["tone"] }
   | { t: "dismissNotice"; id: string }
   // courts
@@ -59,6 +64,11 @@ type Action =
   | { t: "updateStaff"; id: string; patch: Partial<Staff> }
   // settings
   | { t: "settings"; patch: Partial<Settings> };
+
+const isDark = () => {
+  const h = new Date().getHours();
+  return h >= 17 || h < 7;
+};
 
 function notice(state: State, text: string, tone: Notice["tone"] = "info"): State {
   return { ...state, notices: [{ id: uid("n"), at: Date.now(), text, tone }, ...state.notices].slice(0, 30) };
@@ -108,6 +118,8 @@ function reducer(state: State, a: Action): State {
       return a.state;
     case "reset":
       return seed();
+    case "undo":
+      return state;
     case "notice":
       return notice(state, a.text, a.tone);
     case "dismissNotice":
@@ -116,7 +128,7 @@ function reducer(state: State, a: Action): State {
     case "startGame": {
       const courts = state.courts.map((c) =>
         c.id === a.courtId
-          ? { ...c, status: "play" as const, lights: c.surface === "Indoor" || new Date().getHours() >= 17 ? true : c.lights, game: { playerIds: a.playerIds, label: a.label, kind: a.kind, startedAt: Date.now(), durationMin: a.durationMin } }
+          ? { ...c, status: "play" as const, lights: c.surface === "Indoor" || isDark() ? true : c.lights, game: { playerIds: a.playerIds, label: a.label, kind: a.kind, startedAt: Date.now(), durationMin: a.durationMin } }
           : c,
       );
       const queue = state.queue.map((q) => (a.playerIds.includes(q.playerId) ? { ...q, state: "playing" as const } : q));
@@ -141,7 +153,8 @@ function reducer(state: State, a: Action): State {
     case "addCourt":
       return notice({ ...state, courts: [...state.courts, a.court] }, `${a.court.name} added.`, "good");
     case "removeCourt":
-      return { ...state, courts: state.courts.filter((c) => c.id !== a.courtId) };
+      const name = state.courts.find((c) => c.id === a.courtId)?.name ?? "Court";
+      return notice({ ...state, courts: state.courts.filter((c) => c.id !== a.courtId) }, `${name} removed.`, "info");
 
     case "checkIn": {
       if (state.queue.some((q) => q.playerId === a.playerId)) return state;
@@ -165,7 +178,8 @@ function reducer(state: State, a: Action): State {
     case "checkOut": {
       const q = state.queue.find((x) => x.playerId === a.playerId);
       if (!q) return state;
-      return { ...state, queue: state.queue.filter((x) => x.playerId !== a.playerId) };
+      const who = state.players.find((p) => p.id === a.playerId)?.name ?? "Player";
+      return notice({ ...state, queue: state.queue.filter((x) => x.playerId !== a.playerId) }, `${who} left open play.`, "info");
     }
     case "fillCourts": {
       let s = state;
@@ -215,6 +229,10 @@ function reducer(state: State, a: Action): State {
           ],
         };
       }
+      if (before && a.patch.status && a.patch.status !== before.status) {
+        const label = { confirmed: "restored", "checked-in": "checked in", cancelled: "cancelled", "no-show": "marked as no-show" }[a.patch.status];
+        s = notice(s, `${before.title} ${label}.`, a.patch.status === "checked-in" || a.patch.status === "confirmed" ? "good" : "info");
+      }
       return s;
     }
 
@@ -256,41 +274,101 @@ function reducer(state: State, a: Action): State {
   }
 }
 
+/* ---------------- undo ---------------- */
+const UNDOABLE = new Set<Action["t"]>(["endGame", "updateBooking", "refundTx", "checkOut", "removeCourt", "fillCourts"]);
+
+function rootReducer(state: State, a: Action): State {
+  if (a.t === "undo") return state.undo ? { ...state.undo.prev, undo: undefined } : state;
+  if (a.t === "load" || a.t === "reset") return reducer(state, a);
+  const prev = state.undo ? { ...state, undo: undefined } : state;
+  const next = reducer(prev, a);
+  if (next === prev) return state;
+  if (UNDOABLE.has(a.t) && next.notices[0] && next.notices[0] !== prev.notices[0]) {
+    return { ...next, undo: { noticeId: next.notices[0].id, prev } };
+  }
+  return { ...next, undo: undefined };
+}
+
+/* ---------------- keep the demo fresh ---------------- */
+const shiftYmd = (s: string | null, days: number) => (s ? ymd(addDays(parseYmd(s), days)) : s);
+
+/** Moves every date forward to today and rebases live timers by the time the club was closed. */
+export function rebase(s: State): State {
+  const today = ymd(new Date());
+  const days = Math.round((parseYmd(today).getTime() - parseYmd(s.seededOn).getTime()) / 864e5);
+  const away = Math.max(0, Date.now() - s.savedAt);
+  if (days <= 0 && away < 60_000) return s;
+  const dayMs = days * 864e5;
+  return {
+    ...s,
+    seededOn: today,
+    savedAt: Date.now(),
+    bookings: days ? s.bookings.map((b) => ({ ...b, date: shiftYmd(b.date, days)! })) : s.bookings,
+    lessons: days ? s.lessons.map((l) => ({ ...l, date: shiftYmd(l.date, days)! })) : s.lessons,
+    events: days ? s.events.map((e) => ({ ...e, start: shiftYmd(e.start, days)!, end: shiftYmd(e.end, days)! })) : s.events,
+    players: days
+      ? s.players.map((p) => ({ ...p, joined: shiftYmd(p.joined, days)!, lastVisit: shiftYmd(p.lastVisit, days)!, renewsOn: shiftYmd(p.renewsOn, days) }))
+      : s.players,
+    transactions: days ? s.transactions.map((t) => ({ ...t, at: t.at + dayMs })) : s.transactions,
+    courts: s.courts.map((c) => (c.game ? { ...c, game: { ...c.game, startedAt: c.game.startedAt + away } } : c)),
+    queue: s.queue.map((q) => ({ ...q, checkedInAt: q.checkedInAt + away, waitingSince: q.waitingSince + away })),
+    notices: s.notices.map((n) => ({ ...n, at: n.at + away })),
+  };
+}
+
+function readSaved(): State | null {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as State;
+    return s && s.version === DATA_VERSION ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function persist(s: State) {
+  try {
+    const { undo: _undo, ...rest } = s;
+    void _undo;
+    localStorage.setItem(KEY, JSON.stringify({ ...rest, savedAt: Date.now() }));
+  } catch {
+    /* storage full or blocked: the demo keeps working in memory */
+  }
+}
+
 type Ctx = { state: State; dispatch: (a: Action) => void };
 const StoreCtx = createContext<Ctx | null>(null);
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, null as unknown as State);
-  const [ready, setReady] = useState(false);
-  const first = useRef(true);
+export function StoreProvider({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
+  const [state, dispatch] = useReducer(rootReducer, null as unknown as State);
+  const latest = useRef<State | null>(null);
 
   useEffect(() => {
-    let loaded: State | null = null;
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) loaded = JSON.parse(raw);
-    } catch {
-      /* storage blocked */
-    }
-    dispatch({ t: "load", state: loaded && loaded.version === 1 ? loaded : seed() });
-    setReady(true);
+    // Hydrate from browser storage once on mount (unavailable during server render).
+    const saved = readSaved();
+    dispatch({ t: "load", state: saved ? rebase(saved) : seed() });
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      /* ignore */
-    }
-  }, [state, ready]);
+    if (!state) return;
+    latest.current = state;
+    persist(state);
+  }, [state]);
+
+  useEffect(() => {
+    // Keep savedAt current while the tab is open so timers are not rewound on reload.
+    const save = () => latest.current && persist(latest.current);
+    const id = setInterval(save, 30_000);
+    window.addEventListener("pagehide", save);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("pagehide", save);
+    };
+  }, []);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
-  if (!ready || !state) return <div className="dash-loading" aria-busy="true" />;
+  if (!state) return <>{fallback ?? <div className="dash-loading" aria-busy="true" />}</>;
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 
@@ -300,7 +378,7 @@ export function useStore() {
   return c;
 }
 
-/** Re-render every `ms` (for live timers). */
+/** Current time, re-rendered every `ms` (for live timers). */
 export function useNow(ms = 1000) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

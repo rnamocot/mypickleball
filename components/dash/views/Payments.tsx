@@ -1,11 +1,12 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { IconDownload, IconRefund, IconWallet } from "../../Icons";
 import { sumRange } from "../calc";
 import { type TxCategory, money } from "../data";
 import { QuickSale } from "../modals";
-import { usePlayerLookup, useStore } from "../store";
+import { useNow, usePlayerLookup, useStore } from "../store";
 import { Empty, Kpi, Modal, PageHead, Panel, SearchInput, Status, Tabs } from "../ui";
 
 type Cat = "all" | TxCategory | "refunded";
@@ -13,14 +14,22 @@ type Cat = "all" | TxCategory | "refunded";
 export function Payments() {
   const { state, dispatch } = useStore();
   const P = usePlayerLookup();
+  const params = useSearchParams();
+  const now = useNow(60000);
   const [cat, setCat] = useState<Cat>("all");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(params.get("q") ?? "");
+  const urlQ = params.get("q") ?? "";
+  const [lastQ, setLastQ] = useState(urlQ);
+  if (urlQ !== lastQ) {
+    setLastQ(urlQ);
+    setQ(urlQ);
+  }
   const [range, setRange] = useState(30);
   const [sale, setSale] = useState(false);
   const [refund, setRefund] = useState<string | null>(null);
   const [limit, setLimit] = useState(60);
 
-  const since = Date.now() - range * 864e5;
+  const since = now - range * 864e5;
   const list = useMemo(() => {
     let l = state.transactions.filter((t) => t.at >= since);
     if (cat === "refunded") l = l.filter((t) => t.status === "refunded");
@@ -32,7 +41,7 @@ export function Payments() {
     return l;
   }, [state.transactions, cat, q, since, P]);
 
-  const refunds30 = state.transactions.filter((t) => t.status === "refunded" && t.at >= Date.now() - 30 * 864e5);
+  const refunds30 = state.transactions.filter((t) => t.status === "refunded" && t.at >= now - 30 * 864e5);
   const filteredTotal = list.filter((t) => t.status === "paid").reduce((a, t) => a + t.amount, 0);
   const tx = state.transactions.find((t) => t.id === refund);
 
@@ -59,7 +68,7 @@ export function Payments() {
       </PageHead>
 
       <div className="grid g-4">
-        <Kpi label="Today" value={money(sumRange(state, 0))} hint={`${state.transactions.filter((t) => new Date(t.at).toDateString() === new Date().toDateString()).length} payments`} />
+        <Kpi label="Today" value={money(sumRange(state, 0))} hint={`${state.transactions.filter((t) => t.status === "paid" && new Date(t.at).toDateString() === new Date(now).toDateString()).length} payments`} />
         <Kpi label="Last 7 days" value={money(sumRange(state, 6))} delta={((sumRange(state, 6) - sumRange(state, 13, 7)) / Math.max(1, sumRange(state, 13, 7))) * 100} hint="vs prior 7 days" />
         <Kpi label="Last 30 days" value={money(sumRange(state, 29))} hint="gross, before card fees" />
         <Kpi label="Refunds (30d)" value={money(refunds30.reduce((a, t) => a + t.amount, 0))} hint={`${refunds30.length} refunds`} />

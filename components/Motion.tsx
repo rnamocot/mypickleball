@@ -110,14 +110,18 @@ export function Motion() {
 /** Splits a headline into masked words that rise in on load. */
 export function Split({ text, delay = 0 }: { text: string; delay?: number }) {
   const words = text.split(" ");
+  // Screen readers get the plain sentence; the animated word masks are visual only.
   return (
-    <span className="split" aria-label={text}>
-      {words.map((w, i) => (
-        <span className="w" key={i} aria-hidden="true">
-          <span style={{ ["--i" as string]: i + delay }}>{w}</span>
-          {i < words.length - 1 ? " " : null}
-        </span>
-      ))}
-    </span>
+    <>
+      <span className="sr-only">{text}</span>
+      <span className="split" aria-hidden="true">
+        {words.map((w, i) => (
+          <span className="w" key={i}>
+            <span style={{ ["--i" as string]: i + delay }}>{w}</span>
+            {i < words.length - 1 ? " " : null}
+          </span>
+        ))}
+      </span>
+    </>
   );
 }

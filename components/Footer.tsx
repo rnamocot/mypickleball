@@ -29,7 +29,7 @@ const cols = [
     links: [
       { href: "/about", label: "Our story" },
       { href: "/contact", label: "Book a demo" },
-      { href: "/contact", label: "Support" },
+      { href: "/dashboard", label: "Live demo" },
       { href: "/signup", label: "Start free trial" },
     ],
   },

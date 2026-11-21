@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { IconPlus, IconShuffle, IconTrophy } from "../../Icons";
 import { type ClubEvent, type Match, type Standing, addDays, fmtDate, money, uid, ymd } from "../data";
@@ -46,7 +47,14 @@ function applyScore(e: ClubEvent, m: Match, sa: number, sb: number): Standing[] 
 
 export function Events() {
   const { state, dispatch } = useStore();
-  const [selId, setSelId] = useState(state.events[0]?.id);
+  const params = useSearchParams();
+  const urlId = params.get("id");
+  const [selId, setSelId] = useState(urlId ?? state.events[0]?.id);
+  const [lastId, setLastId] = useState(urlId);
+  if (urlId !== lastId) {
+    setLastId(urlId);
+    if (urlId) setSelId(urlId);
+  }
   const [creating, setCreating] = useState(false);
   const [gen, setGen] = useState(false);
   const ev = state.events.find((e) => e.id === selId);

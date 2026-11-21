@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   IconBell,
@@ -16,7 +16,6 @@ import {
   IconClose,
   IconPlayers,
   IconQueue,
-  IconSearch,
   IconSettings,
   IconStaff,
   IconTrophy,
@@ -24,6 +23,7 @@ import {
   IconWhistle,
 } from "../Icons";
 import { LogoMark } from "../Logo";
+import { GlobalSearch } from "./GlobalSearch";
 import { StoreProvider, useNow, useStore } from "./store";
 import { Avatar } from "./ui";
 
@@ -64,22 +64,55 @@ const groups = [
 
 export function DashShell({ children }: { children: React.ReactNode }) {
   return (
-    <StoreProvider>
+    <StoreProvider fallback={<Skeleton />}>
       <Frame>{children}</Frame>
     </StoreProvider>
   );
 }
 
+/** Placeholder shown for the instant before the club data loads from the browser. */
+function Skeleton() {
+  return (
+    <div className="dash" aria-busy="true" aria-label="Loading dashboard">
+      <aside className="side">
+        <div className="sk" style={{ height: 36, width: 170, margin: "4px 8px 22px" }} />
+        {Array.from({ length: 11 }, (_, i) => (
+          <div key={i} className="sk" style={{ height: 22, width: 120 + ((i * 37) % 60), margin: "10px 12px" }} />
+        ))}
+      </aside>
+      <div className="dmain">
+        <div className="topbar">
+          <div className="sk" style={{ height: 40, width: 380 }} />
+        </div>
+        <div className="dcontent">
+          <div className="sk" style={{ height: 116, borderRadius: 20, marginBottom: 16 }} />
+          <div className="grid g-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="sk" style={{ height: 124, borderRadius: 16 }} />
+            ))}
+          </div>
+          <div className="grid g-main mt">
+            <div className="sk" style={{ height: 420, borderRadius: 16 }} />
+            <div className="sk" style={{ height: 420, borderRadius: 16 }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Frame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { state } = useStore();
   const [open, setOpen] = useState(false);
   const [bell, setBell] = useState(false);
-  const [q, setQ] = useState("");
   const now = useNow(30000);
 
-  useEffect(() => setOpen(false), [pathname]);
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
+    setOpen(false);
+  }
 
   const waiting = state.queue.filter((x) => x.state === "waiting").length;
   const live = state.courts.filter((c) => c.status === "play").length;
@@ -137,21 +170,7 @@ function Frame({ children }: { children: React.ReactNode }) {
           <button className="icon-btn menu-toggle" onClick={() => setOpen(true)} aria-label="Open menu">
             <IconMenu size={20} />
           </button>
-          <form
-            className="top-search"
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              router.push(`/dashboard/players?q=${encodeURIComponent(q)}`);
-            }}
-          >
-            <IconSearch size={18} />
-            <label htmlFor="global-search" className="sr-only">
-              Search players
-            </label>
-            <input id="global-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search players, phone or email" />
-            <kbd>↵</kbd>
-          </form>
+          <GlobalSearch />
 
           <div className="top-right">
             <span className="top-clock" suppressHydrationWarning>
@@ -228,22 +247,37 @@ function Bell({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
 }
 
 function Toasts() {
-  const { state } = useStore();
-  const [shown, setShown] = useState<string | null>(null);
-  const first = useRef(state.notices[0]?.id);
+  const { state, dispatch } = useStore();
   const top = state.notices[0];
-  useEffect(() => {
-    if (!top || top.id === first.current) return;
-    first.current = top.id;
+  const [seenAt, setSeenAt] = useState(top?.at ?? 0);
+  const [shown, setShown] = useState<string | null>(null);
+  // Only brand-new notices pop up (an undo brings back an older one, which stays quiet).
+  if (top && top.at > seenAt) {
+    setSeenAt(top.at);
     setShown(top.id);
-    const t = setTimeout(() => setShown(null), 3800);
+  }
+  const canUndo = !!top && state.undo?.noticeId === top.id;
+  useEffect(() => {
+    if (!shown) return;
+    const t = setTimeout(() => setShown(null), canUndo ? 7000 : 3800);
     return () => clearTimeout(t);
-  }, [top]);
+  }, [shown, canUndo]);
   if (!top || shown !== top.id) return null;
   return (
     <div className={`toast n-${top.tone}`} role="status" aria-live="polite">
       <i aria-hidden="true" />
-      {top.text}
+      <span style={{ flex: 1 }}>{top.text}</span>
+      {canUndo && (
+        <button
+          className="link-btn toast-undo"
+          onClick={() => {
+            dispatch({ t: "undo" });
+            setShown(null);
+          }}
+        >
+          Undo
+        </button>
+      )}
     </div>
   );
 }

@@ -179,11 +179,37 @@ function FieldIdContext({ id, children }: { id: string; children: React.ReactNod
   );
 }
 
-function useLockAndEscape(open: boolean, onClose: () => void) {
+const FOCUSABLE = "a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex=\"-1\"])";
+
+/** Locks page scroll, closes on Escape, keeps Tab focus inside the dialog, restores focus on close. */
+function useLockAndEscape(open: boolean, onClose: () => void, box: React.RefObject<HTMLElement | null>) {
+  // Callers pass inline handlers; read the latest one through a ref so the effect
+  // only runs when the dialog opens or closes (otherwise focus jumps on every keystroke).
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return close.current();
+      if (e.key !== "Tab" || !box.current) return;
+      const els = Array.from(box.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
+      if (!els.length) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (!box.current.contains(document.activeElement)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
@@ -191,7 +217,7 @@ function useLockAndEscape(open: boolean, onClose: () => void) {
       document.body.style.overflow = "";
       prev?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, box]);
 }
 
 export function Modal({
@@ -209,8 +235,8 @@ export function Modal({
   footer?: React.ReactNode;
   wide?: boolean;
 }) {
-  useLockAndEscape(open, onClose);
   const box = useRef<HTMLDivElement>(null);
+  useLockAndEscape(open, onClose, box);
   useEffect(() => {
     if (open) setTimeout(() => box.current?.querySelector<HTMLElement>("input,select,textarea,button")?.focus(), 30);
   }, [open]);
@@ -245,11 +271,15 @@ export function Drawer({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  useLockAndEscape(open, onClose);
+  const box = useRef<HTMLElement>(null);
+  useLockAndEscape(open, onClose, box);
+  useEffect(() => {
+    if (open) setTimeout(() => box.current?.querySelector<HTMLElement>(".modal-head button")?.focus(), 30);
+  }, [open]);
   if (!open || typeof document === "undefined") return null;
   return createPortal(
     <div className="overlay overlay-right" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={title}>
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label={title} ref={box}>
         <div className="modal-head">
           <h2>{title}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="Close">

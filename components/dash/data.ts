@@ -163,6 +163,12 @@ export type Notice = { id: string; at: number; text: string; tone: "info" | "goo
 
 export type State = {
   version: number;
+  /** YYYY-MM-DD the demo data was last aligned to */
+  seededOn: string;
+  /** epoch ms of the last save, used to rebase live timers */
+  savedAt: number;
+  /** one-step undo snapshot (never persisted) */
+  undo?: { noticeId: string; prev: State };
   courts: Court[];
   players: Player[];
   bookings: Booking[];
@@ -176,6 +182,9 @@ export type State = {
   settings: Settings;
   notices: Notice[];
 };
+
+/** Bump when the sample data changes so saved demos are replaced. */
+export const DATA_VERSION = 5;
 
 /* ---------------- helpers ---------------- */
 
@@ -216,6 +225,8 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .join("")
     .toUpperCase();
+/** Current time for records created in event handlers. */
+export const stamp = () => Date.now();
 export const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 9)}`;
 export const nowMinutes = () => {
   const d = new Date();
@@ -358,7 +369,7 @@ export function seed(): State {
           title: type === "Court" ? `${player.name.split(" ")[1]} party` : title,
           playerId: player.id,
           price,
-          paid: status !== "confirmed" || r() < 0.6,
+          paid: status !== "confirmed" || r() < 0.9,
           status,
         });
         start += duration - 60;
@@ -475,8 +486,10 @@ export function seed(): State {
   const transactions: Transaction[] = [];
   const methods: Transaction["method"][] = ["Card", "Card", "Card", "Apple Pay", "Wallet", "Cash"];
   clean.forEach((b) => {
-    if (!b.paid || b.status === "cancelled" || parseYmd(b.date) > today) return;
-    const at = parseYmd(b.date).getTime() + (b.start - 60 * (1 + Math.floor(r() * 30))) * 60000;
+    if (!b.paid || b.status === "cancelled") return;
+    const paidAt = new Date(parseYmd(b.date).getTime() + (b.start - 60 * (1 + Math.floor(r() * 30))) * 60000);
+    if (paidAt.getHours() < 7 || paidAt.getHours() > 21) paidAt.setHours(7 + Math.floor(r() * 14));
+    const at = paidAt.getTime();
     if (at > now) return;
     transactions.push({
       id: `t${transactions.length + 1}`,
@@ -543,7 +556,9 @@ export function seed(): State {
   ];
 
   return {
-    version: 1,
+    version: DATA_VERSION,
+    seededOn: T,
+    savedAt: now,
     courts,
     players,
     bookings: clean,

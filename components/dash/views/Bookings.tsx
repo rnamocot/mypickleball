@@ -1,9 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { IconChevron, IconChevronLeft, IconPlus } from "../../Icons";
-import { type Booking, addDays, fmtDate, fmtShortTime, fmtTime, money, nowMinutes, parseYmd, ymd } from "../data";
+import { type Booking, addDays, fmtDate, fmtShortTime, fmtTime, money, parseYmd, ymd } from "../data";
 import { BookingModal } from "../modals";
 import { useNow, usePlayerLookup, useStore } from "../store";
 import { Avatar, Drawer, Empty, PageHead, Panel, SearchInput, Status, Tabs, type Tone } from "../ui";
@@ -24,55 +24,114 @@ const statusLabel: Record<Booking["status"], string> = {
   "no-show": "No-show",
 };
 
+type Col = { key: string; courtId: string; date: string; label: string; sub: string; blocked: boolean };
+
 export function Bookings() {
   const { state } = useStore();
   const params = useSearchParams();
-  useNow(60000);
-  const [view, setView] = useState<"calendar" | "list">("calendar");
-  const [date, setDate] = useState(ymd(new Date()));
-  const [modal, setModal] = useState<{ courtId?: string; date?: string; start?: number } | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const now = useNow(60000);
+  const today = ymd(new Date(now));
+  const [view, setView] = useState<"day" | "week" | "list">("day");
+  const [date, setDate] = useState(params.get("date") ?? today);
+  const [weekCourt, setWeekCourt] = useState(state.courts[0]?.id ?? "");
+  const [modal, setModal] = useState<{ courtId?: string; date?: string; start?: number } | null>(params.get("new") ? {} : null);
+  const [selected, setSelected] = useState<string | null>(params.get("open"));
 
-  useEffect(() => {
+  // Follow deep links (search results, the top bar "New booking" button) when the URL changes.
+  const key = params.toString();
+  const [lastKey, setLastKey] = useState(key);
+  if (key !== lastKey) {
+    setLastKey(key);
     if (params.get("new")) setModal({});
-  }, [params]);
+    if (params.get("date")) {
+      setDate(params.get("date")!);
+      setView("day");
+    }
+    if (params.get("open")) setSelected(params.get("open"));
+  }
 
   const s = state.settings;
-  const dayBookings = state.bookings.filter((b) => b.date === date);
-  const revenue = dayBookings.filter((b) => b.status !== "cancelled").reduce((a, b) => a + b.price, 0);
-  const isToday = date === ymd(new Date());
+  const weekStart = addDays(parseYmd(date), -((parseYmd(date).getDay() + 6) % 7)); // Monday
+  const weekDates = Array.from({ length: 7 }, (_, i) => ymd(addDays(weekStart, i)));
+  const step = view === "week" ? 7 : 1;
+  const weekCourtObj = state.courts.find((x) => x.id === weekCourt) ?? state.courts[0];
+
+  const cols: Col[] =
+    view === "week"
+      ? weekDates.map((d) => ({
+          key: d,
+          courtId: weekCourtObj?.id ?? "",
+          date: d,
+          label: d === today ? "Today" : fmtDate(d, { weekday: "short" }),
+          sub: fmtDate(d, { month: "short", day: "numeric" }),
+          blocked: weekCourtObj?.status === "maintenance" && d === today,
+        }))
+      : state.courts.map((c) => ({
+          key: c.id,
+          courtId: c.id,
+          date,
+          label: c.name,
+          sub: c.surface + (c.status === "maintenance" ? " · blocked" : ""),
+          blocked: c.status === "maintenance",
+        }));
+
+  const inView =
+    view === "week"
+      ? state.bookings.filter((b) => b.courtId === weekCourtObj?.id && weekDates.includes(b.date))
+      : state.bookings.filter((b) => b.date === date);
+  const live = inView.filter((b) => b.status !== "cancelled");
+  const revenue = live.reduce((a, b) => a + b.price, 0);
+  const title =
+    view === "week"
+      ? `Week of ${fmtDate(weekDates[0], { month: "long", day: "numeric" })} · ${weekCourtObj?.name ?? ""}`
+      : fmtDate(date, { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <>
-      <PageHead title="Bookings" sub={`${fmtDate(date, { weekday: "long", month: "long", day: "numeric" })} · ${dayBookings.filter((b) => b.status !== "cancelled").length} bookings · ${money(revenue)}`}>
+      <PageHead title="Bookings" sub={view === "list" ? "All bookings" : `${title} · ${live.length} bookings · ${money(revenue)}`}>
         <div className="seg" role="group" aria-label="View">
-          <button aria-pressed={view === "calendar"} onClick={() => setView("calendar")}>
-            Calendar
-          </button>
-          <button aria-pressed={view === "list"} onClick={() => setView("list")}>
-            List
-          </button>
+          {(["day", "week", "list"] as const).map((v) => (
+            <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>
+              {v[0].toUpperCase() + v.slice(1)}
+            </button>
+          ))}
         </div>
         <button className="btn btn-primary btn-sm" onClick={() => setModal({ date })}>
           <IconPlus size={16} /> New booking
         </button>
       </PageHead>
 
-      {view === "calendar" ? (
+      {view !== "list" ? (
         <Panel
           pad={false}
           title={
-            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button className="icon-btn sm" aria-label="Previous day" onClick={() => setDate(ymd(addDays(parseYmd(date), -1)))}>
+            <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <button className="icon-btn sm" aria-label={view === "week" ? "Previous week" : "Previous day"} onClick={() => setDate(ymd(addDays(parseYmd(date), -step)))}>
                 <IconChevronLeft size={16} />
               </button>
-              <button className="icon-btn sm" aria-label="Next day" onClick={() => setDate(ymd(addDays(parseYmd(date), 1)))}>
+              <button className="icon-btn sm" aria-label={view === "week" ? "Next week" : "Next day"} onClick={() => setDate(ymd(addDays(parseYmd(date), step)))}>
                 <IconChevron size={16} />
               </button>
-              <button className="btn btn-ghost btn-xs" onClick={() => setDate(ymd(new Date()))} disabled={isToday}>
+              <button className="btn btn-ghost btn-xs" onClick={() => setDate(today)} disabled={view === "week" ? weekDates.includes(today) : date === today}>
                 Today
               </button>
-              <input type="date" className="select" style={{ height: 32, backgroundImage: "none", paddingRight: 12 }} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} aria-label="Pick date" />
+              <input
+                type="date"
+                className="select"
+                style={{ height: 32, backgroundImage: "none", paddingRight: 12 }}
+                value={date}
+                onChange={(e) => e.target.value && setDate(e.target.value)}
+                aria-label="Pick date"
+              />
+              {view === "week" && (
+                <select className="select" style={{ height: 32 }} value={weekCourtObj?.id} onChange={(e) => setWeekCourt(e.target.value)} aria-label="Court">
+                  {state.courts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </span>
           }
           action={
@@ -91,7 +150,16 @@ export function Bookings() {
             </div>
           }
         >
-          <Calendar date={date} bookings={dayBookings} onSlot={(courtId, start) => setModal({ courtId, date, start })} onPick={setSelected} isToday={isToday} open={s.open} close={s.close} />
+          <Calendar
+            cols={cols}
+            bookings={inView}
+            today={today}
+            nowMin={new Date(now).getHours() * 60 + new Date(now).getMinutes()}
+            onSlot={(courtId, d, start) => setModal({ courtId, date: d, start })}
+            onPick={setSelected}
+            open={s.open}
+            close={s.close}
+          />
         </Panel>
       ) : (
         <BookingList onPick={setSelected} />
@@ -104,66 +172,66 @@ export function Bookings() {
 }
 
 function Calendar({
-  date,
+  cols,
   bookings,
+  today,
+  nowMin,
   onSlot,
   onPick,
-  isToday,
   open,
   close,
 }: {
-  date: string;
+  cols: Col[];
   bookings: Booking[];
-  onSlot: (courtId: string, start: number) => void;
+  today: string;
+  nowMin: number;
+  onSlot: (courtId: string, date: string, start: number) => void;
   onPick: (id: string) => void;
-  isToday: boolean;
   open: number;
   close: number;
 }) {
   const { state } = useStore();
   const rows: number[] = [];
   for (let m = open; m < close; m += SLOT) rows.push(m);
-  const nm = nowMinutes();
-  const cols = `64px repeat(${state.courts.length}, minmax(120px, 1fr))`;
+  const grid = `64px repeat(${cols.length}, minmax(120px, 1fr))`;
+  const firstToday = cols.findIndex((c) => c.date === today);
+  const isWeek = cols.length > 0 && cols[0].date !== cols[cols.length - 1].date;
 
   return (
     <div className="cal-wrap">
-      <div className="cal" style={{ gridTemplateColumns: cols }}>
+      <div className="cal" style={{ gridTemplateColumns: grid }}>
         <div className="cal-head cal-times" style={{ zIndex: 4 }} />
-        {state.courts.map((c) => (
-          <div className="cal-head" key={c.id}>
-            {c.name}
-            <small>
-              {c.surface}
-              {c.status === "maintenance" ? " · blocked" : ""}
-            </small>
+        {cols.map((c) => (
+          <div className={`cal-head ${isWeek && c.date === today ? "is-today" : ""}`} key={c.key}>
+            {c.label}
+            <small>{c.sub}</small>
           </div>
         ))}
 
         <div className="cal-times">
-          {rows.map((m) => (
-            <div key={m} className="cal-time" style={{ height: ROW }}>
+          {rows.map((m, i) => (
+            <div key={m} className={`cal-time ${i === 0 ? "first" : ""}`} style={{ height: ROW }}>
               {m % 60 === 0 ? fmtShortTime(m) : ""}
             </div>
           ))}
         </div>
 
-        {state.courts.map((c, ci) => (
-          <div className="cal-col" key={c.id}>
-            {isToday && nm >= open && nm <= close && (
-              <div className={`cal-now ${ci === 0 ? "first" : ""}`} style={{ top: ((nm - open) / SLOT) * ROW }} aria-hidden="true" />
+        {cols.map((c, ci) => (
+          <div className="cal-col" key={c.key}>
+            {c.date === today && nowMin >= open && nowMin <= close && (
+              <div className={`cal-now ${ci === firstToday ? "first" : ""}`} style={{ top: ((nowMin - open) / SLOT) * ROW }} aria-hidden="true" />
             )}
             {rows.map((m) => (
               <button
                 key={m}
-                className={`cal-slot ${m % 60 === 0 ? "hour" : ""} ${c.status === "maintenance" ? "off" : ""}`}
+                className={`cal-slot ${m % 60 === 0 ? "hour" : ""} ${c.blocked ? "off" : ""}`}
                 style={{ height: ROW }}
-                aria-label={`Book ${c.name} at ${fmtTime(m)}`}
-                onClick={() => c.status !== "maintenance" && onSlot(c.id, m)}
+                aria-label={`Book ${c.label} ${c.sub} at ${fmtTime(m)}`}
+                onClick={() => !c.blocked && onSlot(c.courtId, c.date, m)}
               />
             ))}
             {bookings
-              .filter((b) => b.courtId === c.id)
+              .filter((b) => b.courtId === c.courtId && b.date === c.date)
               .map((b) => {
                 const p = state.players.find((x) => x.id === b.playerId);
                 return (

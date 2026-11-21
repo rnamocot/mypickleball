@@ -26,11 +26,11 @@ export function Overview() {
 
   const rev = useMemo(() => revenueByDay(state, 14), [state]);
   const todayRev = sumRange(state, 0);
-  const weekAgo = Date.now() - 7 * 864e5;
+  const weekAgo = now - 7 * 864e5;
   const weekAgoStart = new Date(weekAgo).setHours(0, 0, 0, 0);
   const sameDayLastWeek = state.transactions.filter((t) => t.status === "paid" && t.at >= weekAgoStart && t.at <= weekAgo).reduce((a, t) => a + t.amount, 0);
   const todays = state.bookings.filter((b) => b.date === today && b.status !== "cancelled");
-  const lastWeekCount = state.bookings.filter((b) => b.date === ymd(new Date(Date.now() - 7 * 864e5)) && b.status !== "cancelled").length;
+  const lastWeekCount = state.bookings.filter((b) => b.date === ymd(new Date(now - 7 * 864e5)) && b.status !== "cancelled").length;
   const live = state.courts.filter((c) => c.status === "play").length;
   const usable = state.courts.filter((c) => c.status !== "maintenance").length;
   const waiting = state.queue.filter((q) => q.state === "waiting");
@@ -40,7 +40,7 @@ export function Overview() {
     ...state.lessons.filter((l) => l.date === today && l.start + l.duration > nm).map((l) => ({ id: l.id, start: l.start, title: l.title, where: state.courts.find((c) => c.id === l.courtId)?.name, kind: "Lesson", status: `${l.enrolled.length}/${l.capacity}` })),
   ].sort((a, b) => a.start - b.start);
 
-  const expiring = state.players.filter((p) => p.renewsOn && p.renewsOn >= today && p.renewsOn <= ymd(new Date(Date.now() + 7 * 864e5)));
+  const expiring = state.players.filter((p) => p.renewsOn && p.renewsOn >= today && p.renewsOn <= ymd(new Date(now + 7 * 864e5)));
   const overdue = state.players.filter((p) => p.balance > 0);
   const nextGroup = pickGroup(state);
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { IconDownload, IconUserPlus } from "../../Icons";
-import { type Player, fmtDate, fmtTime, money, uid, ymd } from "../data";
+import { type Player, fmtDate, fmtTime, money, stamp, uid, ymd } from "../data";
 import { useStore } from "../store";
 import { Avatar, Drawer, Empty, Field, Modal, PageHead, Panel, SearchInput, Status, Tabs } from "../ui";
 
@@ -19,9 +19,13 @@ export function Players() {
   const [sel, setSel] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
-  useEffect(() => {
-    setQ(params.get("q") ?? "");
-  }, [params]);
+  // Follow ?q= links from the top bar search.
+  const urlQ = params.get("q") ?? "";
+  const [lastQ, setLastQ] = useState(urlQ);
+  if (urlQ !== lastQ) {
+    setLastQ(urlQ);
+    setQ(urlQ);
+  }
 
   const plan = (id: string | null) => state.plans.find((p) => p.id === id);
   const list = useMemo(() => {
@@ -162,7 +166,7 @@ function PlayerDrawer({ id, onClose }: { id: string | null; onClose: () => void 
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
-                dispatch({ t: "addTx", tx: { id: uid("t"), at: Date.now(), playerId: p.id, description: "Balance payment", category: "Court", amount: p.balance, method: "Card", status: "paid" } });
+                dispatch({ t: "addTx", tx: { id: uid("t"), at: stamp(), playerId: p.id, description: "Balance payment", category: "Court", amount: p.balance, method: "Card", status: "paid" } });
                 dispatch({ t: "updatePlayer", id: p.id, patch: { balance: 0 } });
               }}
             >
