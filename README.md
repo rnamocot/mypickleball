@@ -15,12 +15,18 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 for the site and http://localhost:3000/dashboard for the club dashboard.
+Open these in the browser:
+
+- http://localhost:3000 marketing site
+- http://localhost:3000/dashboard staff dashboard (sample club)
+- http://localhost:3000/play player booking portal (same sample club; actions show up live in the dashboard)
+- http://localhost:3000/tv full-screen court board for the facility TV
 
 ## Structure
 
 - `app/(site)` marketing pages (home, features, pricing, story, contact, signup, legal)
 - `app/dashboard` club dashboard
+- `app/play` player booking portal, `app/tv` TV court board
 - `components` shared UI, branded icons, logo
 - `components/dash` dashboard store, charts, views
 - `lib/site.ts` site config, pricing plans, FAQ

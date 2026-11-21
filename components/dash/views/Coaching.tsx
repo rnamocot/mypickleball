@@ -194,6 +194,29 @@ function LessonDrawer({ id, onClose }: { id: string | null; onClose: () => void 
           })}
         </ul>
       )}
+      {l.waitlist.length > 0 && (
+        <>
+          <div className="section-title">Waitlist · {l.waitlist.length}</div>
+          <ul className="rows" style={{ margin: "0 -20px" }}>
+            {l.waitlist.map((pid, i) => {
+              const p = P(pid);
+              if (!p) return null;
+              return (
+                <li key={pid}>
+                  <span className="t" style={{ minWidth: 24 }}>
+                    {i + 1}
+                  </span>
+                  <span className="grow">{p.name}</span>
+                  <button className="link-btn" onClick={() => dispatch({ t: "leaveLessonWaitlist", lessonId: l.id, playerId: pid })}>
+                    Remove
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <p style={{ fontSize: 12.5, color: "var(--dim)", marginTop: 10 }}>When someone leaves the roster, the first player here moves in automatically.</p>
+        </>
+      )}
     </Drawer>
   );
 }
@@ -228,7 +251,7 @@ function NewLesson({ open, onClose }: { open: boolean; onClose: () => void }) {
           <button
             className="btn btn-primary btn-sm"
             onClick={() => {
-              dispatch({ t: "addLesson", lesson: { ...f, id: uid("l"), title: f.title || (f.kind === "Private" ? "Private lesson" : `${f.level} ${f.kind.toLowerCase()}`), capacity: f.kind === "Private" ? 1 : f.capacity, enrolled: [] } });
+              dispatch({ t: "addLesson", lesson: { ...f, id: uid("l"), title: f.title || (f.kind === "Private" ? "Private lesson" : `${f.level} ${f.kind.toLowerCase()}`), capacity: f.kind === "Private" ? 1 : f.capacity, enrolled: [], waitlist: [] } });
               onClose();
             }}
           >

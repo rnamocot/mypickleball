@@ -152,9 +152,13 @@ function Frame({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="side-foot">
-          <a href="/" className="side-link" target="_blank" rel="noopener">
+          <a href="/play" className="side-link" target="_blank" rel="noopener">
             <IconExternal size={19} />
-            <span>View public site</span>
+            <span>Player booking page</span>
+          </a>
+          <a href="/tv" className="side-link" target="_blank" rel="noopener">
+            <IconExternal size={19} />
+            <span>TV court board</span>
           </a>
           <Link href="/" className="side-link">
             <IconLogout size={19} />

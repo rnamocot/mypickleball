@@ -86,6 +86,8 @@ export type Lesson = {
   courtId: string;
   capacity: number;
   enrolled: string[];
+  /** players waiting for a spot, first in line first */
+  waitlist: string[];
   price: number;
   level: string;
 };
@@ -106,6 +108,8 @@ export type ClubEvent = {
   status: "Registering" | "In progress" | "Completed";
   standings: Standing[];
   matches: Match[];
+  /** player ids registered online or at the desk */
+  registrations: string[];
 };
 
 export type Plan = {
@@ -159,6 +163,9 @@ export type Settings = {
   noShowFee: number;
 };
 
+/** A player waiting for any court at a specific time. */
+export type CourtWait = { id: string; playerId: string; date: string; start: number; duration: number; at: number };
+
 export type Notice = { id: string; at: number; text: string; tone: "info" | "good" | "warn" };
 
 export type State = {
@@ -181,10 +188,11 @@ export type State = {
   staff: Staff[];
   settings: Settings;
   notices: Notice[];
+  courtWaitlist: CourtWait[];
 };
 
 /** Bump when the sample data changes so saved demos are replaced. */
-export const DATA_VERSION = 5;
+export const DATA_VERSION = 6;
 
 /* ---------------- helpers ---------------- */
 
@@ -389,7 +397,7 @@ export function seed(): State {
     { id: "k3", name: "Elena Moreno", specialty: "Tournament strategy", rate: 95, rating: 5.0, bio: "5.0 pro, APP tour finalist.", hue: 15 },
     { id: "k4", name: "Leo Sato", specialty: "Juniors & drills", rate: 55, rating: 4.7, bio: "Runs the junior academy.", hue: 160 },
   ];
-  const lessonTpl: Omit<Lesson, "id" | "date" | "enrolled">[] = [
+  const lessonTpl: Omit<Lesson, "id" | "date" | "enrolled" | "waitlist">[] = [
     { coachId: "k1", title: "Third-shot drop clinic", kind: "Clinic", start: 18 * 60, duration: 60, courtId: "c2", capacity: 8, price: 30, level: "3.0–3.5" },
     { coachId: "k2", title: "Beginner bootcamp", kind: "Clinic", start: 9 * 60, duration: 90, courtId: "c4", capacity: 12, price: 25, level: "2.0–2.5" },
     { coachId: "k3", title: "Private lesson", kind: "Private", start: 11 * 60, duration: 60, courtId: "c1", capacity: 1, price: 95, level: "4.0+" },
@@ -403,13 +411,17 @@ export function seed(): State {
       if ((d + i) % 3 === 2) return;
       const n = Math.min(t.capacity, Math.floor(r() * (t.capacity + 1)) + (t.capacity > 1 ? 2 : 0));
       const enrolled = Array.from(new Set(Array.from({ length: n }, () => pick(players).id))).slice(0, t.capacity);
-      lessons.push({ ...t, id: `l${lessons.length + 1}`, date: ymd(addDays(today, d)), enrolled });
+      const waitlist =
+        enrolled.length >= t.capacity && t.capacity > 1
+          ? players.filter((p) => !enrolled.includes(p.id)).slice((d + 3) * 2, (d + 3) * 2 + 2).map((p) => p.id)
+          : [];
+      lessons.push({ ...t, id: `l${lessons.length + 1}`, date: ymd(addDays(today, d)), enrolled, waitlist });
     });
   }
 
   /* events */
   const names = players.slice(0, 16).map((p) => p.name);
-  const events: ClubEvent[] = [
+  const baseEvents: Omit<ClubEvent, "registrations">[] = [
     {
       id: "e1",
       name: "Spring Doubles League",
@@ -481,6 +493,10 @@ export function seed(): State {
       matches: [],
     },
   ];
+
+  // who signed up online for each event (leagues and ladders track teams by name instead)
+  const regs: Record<string, string[]> = { e3: players.slice(20, 30).map((p) => p.id), e4: players.slice(30, 39).map((p) => p.id) };
+  const events: ClubEvent[] = baseEvents.map((e) => ({ ...e, registrations: regs[e.id] ?? [] }));
 
   /* transactions: derived from paid bookings + memberships + retail */
   const transactions: Transaction[] = [];
@@ -585,6 +601,7 @@ export function seed(): State {
       cancelHours: 24,
       noShowFee: 15,
     },
+    courtWaitlist: [],
     notices: [
       { id: "n1", at: now - 4 * 60000, text: "Court 3 game ends in 2 minutes. Next group notified.", tone: "warn" },
       { id: "n2", at: now - 22 * 60000, text: "Rachel Park renewed Competitive membership ($79).", tone: "good" },

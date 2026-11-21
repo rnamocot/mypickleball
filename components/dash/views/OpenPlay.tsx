@@ -54,6 +54,9 @@ export function OpenPlay() {
             </option>
           ))}
         </select>
+        <a href="/tv" target="_blank" rel="noopener" className="btn btn-ghost btn-sm">
+          TV board
+        </a>
         <button className="btn btn-primary btn-sm" onClick={() => dispatch({ t: "fillCourts" })} disabled={next.length < 4 || openCourts.length === 0}>
           <IconShuffle size={16} /> Fill {openCourts.length} open court{openCourts.length === 1 ? "" : "s"}
         </button>

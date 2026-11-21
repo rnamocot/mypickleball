@@ -314,7 +314,7 @@ function NewEvent({ open, onClose, onCreated }: { open: boolean; onClose: () => 
             disabled={!f.name.trim()}
             onClick={() => {
               const id = uid("e");
-              dispatch({ t: "addEvent", event: { ...f, id, end: f.end < f.start ? f.start : f.end, entrants: 0, status: "Registering", standings: [], matches: [] } });
+              dispatch({ t: "addEvent", event: { ...f, id, end: f.end < f.start ? f.start : f.end, entrants: 0, status: "Registering", standings: [], matches: [], registrations: [] } });
               onCreated(id);
               onClose();
             }}

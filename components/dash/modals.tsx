@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { IconMinus, IconPlus } from "./miniIcons";
-import { type Booking, type BookingType, type Transaction, fmtTime, money, uid, ymd } from "./data";
+import { type Booking, type BookingType, type Transaction, addDays, fmtTime, money, parseYmd, uid, ymd } from "./data";
 import { useStore } from "./store";
 import { Avatar, Field, Modal } from "./ui";
 
@@ -53,6 +53,7 @@ export function BookingModal({
   const [title, setTitle] = useState("");
   const [paid, setPaid] = useState(true);
   const [priceText, setPriceText] = useState("");
+  const [weeks, setWeeks] = useState(1);
 
   // Start fresh every time the modal opens (and follow a new slot preset).
   const key = `${preset?.courtId}-${preset?.date}-${preset?.start}-${open}`;
@@ -70,6 +71,7 @@ export function BookingModal({
       setTitle("");
       setPaid(true);
       setPriceText("");
+      setWeeks(1);
     }
   }
 
@@ -94,6 +96,20 @@ export function BookingModal({
 
   const submit = () => {
     if (conflict) return;
+    if (weeks > 1) {
+      const titleText = title || (player ? `${player.name.split(" ").slice(-1)[0]} weekly` : "Weekly booking");
+      const list: Booking[] = [];
+      for (let w = 0; w < weeks; w++) {
+        const d = ymd(addDays(parseYmd(date), w * 7));
+        const clash = state.bookings.some((b) => b.courtId === courtId && b.date === d && b.status !== "cancelled" && b.start < start + duration && start < b.start + b.duration);
+        if (clash) continue;
+        list.push({ id: uid("b"), courtId, date: d, start, duration, type, title: titleText, playerId: playerId || null, price, paid: w === 0 && paid, status: "confirmed" });
+      }
+      dispatch({ t: "addBookings", bookings: list });
+      if (list.length < weeks) dispatch({ t: "notice", text: `${weeks - list.length} of ${weeks} weeks were skipped because the court was already booked.`, tone: "warn" });
+      onClose();
+      return;
+    }
     const b: Booking = {
       id: uid("b"),
       courtId,
@@ -184,6 +200,16 @@ export function BookingModal({
         </Field>
         <Field label="Price" hint={priceText ? `Suggested ${money(suggested)}` : "Suggested from your rates. Type to override."}>
           <input inputMode="decimal" value={priceText} onChange={(e) => setPriceText(e.target.value.replace(/[^\d.]/g, ""))} placeholder={String(suggested)} />
+        </Field>
+        <Field label="Repeat" hint={weeks > 1 ? "Weeks where the court is taken are skipped." : undefined}>
+          <select value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+            <option value={1}>Does not repeat</option>
+            {[4, 8, 12].map((w) => (
+              <option key={w} value={w}>
+                Every week for {w} weeks
+              </option>
+            ))}
+          </select>
         </Field>
         <Field label="Title (optional)">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Rivera doubles" />

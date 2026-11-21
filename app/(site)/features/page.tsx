@@ -191,6 +191,9 @@ export default function FeaturesPage() {
             <Link href="/dashboard" className="text-link">
               Open the live demo <IconArrow size={18} />
             </Link>
+            <Link href="/play" className="text-link">
+              See the player booking page <IconArrow size={18} />
+            </Link>
             <Link href="/pricing" className="text-link">
               See plans and pricing <IconArrow size={18} />
             </Link>

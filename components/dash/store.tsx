@@ -5,6 +5,7 @@ import {
   type Booking,
   type ClubEvent,
   type Court,
+  type CourtWait,
   type GameKind,
   type Lesson,
   type Notice,
@@ -16,6 +17,7 @@ import {
   type Transaction,
   DATA_VERSION,
   addDays,
+  fmtTime,
   parseYmd,
   seed,
   uid,
@@ -43,6 +45,12 @@ type Action =
   | { t: "fillCourts" }
   // bookings
   | { t: "addBooking"; booking: Booking }
+  | { t: "addBookings"; bookings: Booking[] }
+  | { t: "joinCourtWaitlist"; wait: CourtWait }
+  | { t: "leaveCourtWaitlist"; id: string }
+  | { t: "leaveLessonWaitlist"; lessonId: string; playerId: string }
+  | { t: "registerEvent"; eventId: string; playerId: string }
+  | { t: "unregisterEvent"; eventId: string; playerId: string }
   | { t: "updateBooking"; id: string; patch: Partial<Booking> }
   // players
   | { t: "addPlayer"; player: Player }
@@ -64,6 +72,50 @@ type Action =
   | { t: "updateStaff"; id: string; patch: Partial<Staff> }
   // settings
   | { t: "settings"; patch: Partial<Settings> };
+
+/** Court price for a player at a time, with their membership discount applied. */
+export function courtPrice(state: State, playerId: string | null, start: number, duration: number) {
+  const s = state.settings;
+  const peak = start >= s.peakStart && start < s.peakEnd;
+  const base = (peak ? s.peakPrice : s.offPeakPrice) * (duration / 60);
+  const p = state.players.find((x) => x.id === playerId);
+  const plan = state.plans.find((x) => x.id === p?.planId);
+  return Math.round(base * (1 - (plan ? plan.courtDiscount / 100 : 0)));
+}
+
+export const overlaps = (aStart: number, aDur: number, bStart: number, bDur: number) => aStart < bStart + bDur && bStart < aStart + aDur;
+
+/** When a booking is cancelled, give the slot to the first matching player on the court waitlist. */
+function promoteCourtWaitlist(state: State, freed: Booking): State {
+  const match = [...state.courtWaitlist]
+    .sort((a, b) => a.at - b.at)
+    .find((w) => w.date === freed.date && w.start >= freed.start && w.start + w.duration <= freed.start + freed.duration);
+  if (!match) return state;
+  const taken = state.bookings.some(
+    (b) => b.courtId === freed.courtId && b.date === match.date && b.status !== "cancelled" && overlaps(b.start, b.duration, match.start, match.duration),
+  );
+  if (taken) return state;
+  const p = state.players.find((x) => x.id === match.playerId);
+  const court = state.courts.find((c) => c.id === freed.courtId);
+  const booking: Booking = {
+    id: uid("b"),
+    courtId: freed.courtId,
+    date: match.date,
+    start: match.start,
+    duration: match.duration,
+    type: "Court",
+    title: `${p?.name.split(" ").slice(-1)[0] ?? "Waitlist"} party`,
+    playerId: match.playerId,
+    price: courtPrice(state, match.playerId, match.start, match.duration),
+    paid: false,
+    status: "confirmed",
+  };
+  return notice(
+    { ...state, bookings: [...state.bookings, booking], courtWaitlist: state.courtWaitlist.filter((w) => w.id !== match.id) },
+    `${p?.name ?? "A player"} got ${court?.name} at ${fmtTime(match.start)} from the waitlist.`,
+    "good",
+  );
+}
 
 const isDark = () => {
   const h = new Date().getHours();
@@ -229,12 +281,26 @@ function reducer(state: State, a: Action): State {
           ],
         };
       }
+      if (before && a.patch.status === "cancelled" && before.status !== "cancelled") {
+        s = promoteCourtWaitlist(s, before);
+      }
       if (before && a.patch.status && a.patch.status !== before.status) {
         const label = { confirmed: "restored", "checked-in": "checked in", cancelled: "cancelled", "no-show": "marked as no-show" }[a.patch.status];
         s = notice(s, `${before.title} ${label}.`, a.patch.status === "checked-in" || a.patch.status === "confirmed" ? "good" : "info");
       }
       return s;
     }
+
+    case "addBookings": {
+      if (!a.bookings.length) return state;
+      return notice({ ...state, bookings: [...state.bookings, ...a.bookings] }, `${a.bookings.length} weekly bookings created: ${a.bookings[0].title}.`, "good");
+    }
+    case "joinCourtWaitlist": {
+      const p = state.players.find((x) => x.id === a.wait.playerId);
+      return notice({ ...state, courtWaitlist: [...state.courtWaitlist, a.wait] }, `${p?.name ?? "Player"} joined the court waitlist for ${fmtTime(a.wait.start)}.`, "info");
+    }
+    case "leaveCourtWaitlist":
+      return { ...state, courtWaitlist: state.courtWaitlist.filter((w) => w.id !== a.id) };
 
     case "addPlayer":
       return notice({ ...state, players: [a.player, ...state.players] }, `${a.player.name} added to players.`, "good");
@@ -243,13 +309,61 @@ function reducer(state: State, a: Action): State {
 
     case "addLesson":
       return notice({ ...state, lessons: [...state.lessons, a.lesson] }, `${a.lesson.title} scheduled.`, "good");
-    case "enroll":
-      return {
+    case "enroll": {
+      const l = state.lessons.find((x) => x.id === a.lessonId);
+      const p = state.players.find((x) => x.id === a.playerId);
+      if (!l || l.enrolled.includes(a.playerId) || l.waitlist.includes(a.playerId)) return state;
+      if (l.enrolled.length >= l.capacity) {
+        return notice(
+          { ...state, lessons: state.lessons.map((x) => (x.id === l.id ? { ...x, waitlist: [...x.waitlist, a.playerId] } : x)) },
+          `${p?.name ?? "Player"} joined the waitlist for ${l.title} (#${l.waitlist.length + 1}).`,
+          "info",
+        );
+      }
+      return notice(
+        { ...state, lessons: state.lessons.map((x) => (x.id === l.id ? { ...x, enrolled: [...x.enrolled, a.playerId] } : x)) },
+        `${p?.name ?? "Player"} signed up for ${l.title}.`,
+        "good",
+      );
+    }
+    case "unenroll": {
+      const l = state.lessons.find((x) => x.id === a.lessonId);
+      if (!l || !l.enrolled.includes(a.playerId)) return state;
+      const [next, ...rest] = l.waitlist;
+      const enrolled = l.enrolled.filter((x) => x !== a.playerId);
+      const updated = next ? { ...l, enrolled: [...enrolled, next], waitlist: rest } : { ...l, enrolled };
+      const s1 = { ...state, lessons: state.lessons.map((x) => (x.id === l.id ? updated : x)) };
+      const who = state.players.find((x) => x.id === a.playerId)?.name ?? "Player";
+      const nextName = state.players.find((x) => x.id === next)?.name;
+      return notice(s1, nextName ? `${who} left ${l.title}. ${nextName} moved in from the waitlist.` : `${who} left ${l.title}.`, "info");
+    }
+    case "leaveLessonWaitlist":
+      return { ...state, lessons: state.lessons.map((l) => (l.id === a.lessonId ? { ...l, waitlist: l.waitlist.filter((x) => x !== a.playerId) } : l)) };
+
+    case "registerEvent": {
+      const e = state.events.find((x) => x.id === a.eventId);
+      const p = state.players.find((x) => x.id === a.playerId);
+      if (!e || e.registrations.includes(a.playerId)) return state;
+      if (e.entrants >= e.capacity) return notice(state, `${e.name} is full.`, "warn");
+      const s1: State = {
         ...state,
-        lessons: state.lessons.map((l) => (l.id === a.lessonId && !l.enrolled.includes(a.playerId) && l.enrolled.length < l.capacity ? { ...l, enrolled: [...l.enrolled, a.playerId] } : l)),
+        events: state.events.map((x) => (x.id === e.id ? { ...x, registrations: [...x.registrations, a.playerId], entrants: x.entrants + 1 } : x)),
+        transactions: e.fee
+          ? [{ id: uid("t"), at: Date.now(), playerId: a.playerId, description: `${e.name} entry`, category: "Event", amount: e.fee, method: "Card", status: "paid" }, ...state.transactions]
+          : state.transactions,
       };
-    case "unenroll":
-      return { ...state, lessons: state.lessons.map((l) => (l.id === a.lessonId ? { ...l, enrolled: l.enrolled.filter((x) => x !== a.playerId) } : l)) };
+      return notice(s1, `${p?.name ?? "Player"} registered for ${e.name}.`, "good");
+    }
+    case "unregisterEvent": {
+      const e = state.events.find((x) => x.id === a.eventId);
+      if (!e || !e.registrations.includes(a.playerId)) return state;
+      const p = state.players.find((x) => x.id === a.playerId);
+      return notice(
+        { ...state, events: state.events.map((x) => (x.id === e.id ? { ...x, registrations: x.registrations.filter((r) => r !== a.playerId), entrants: Math.max(0, x.entrants - 1) } : x)) },
+        `${p?.name ?? "Player"} withdrew from ${e.name}.`,
+        "info",
+      );
+    }
 
     case "addEvent":
       return notice({ ...state, events: [a.event, ...state.events] }, `${a.event.name} created.`, "good");
@@ -275,7 +389,7 @@ function reducer(state: State, a: Action): State {
 }
 
 /* ---------------- undo ---------------- */
-const UNDOABLE = new Set<Action["t"]>(["endGame", "updateBooking", "refundTx", "checkOut", "removeCourt", "fillCourts"]);
+const UNDOABLE = new Set<Action["t"]>(["endGame", "updateBooking", "refundTx", "checkOut", "removeCourt", "fillCourts", "unenroll", "unregisterEvent", "addBookings"]);
 
 function rootReducer(state: State, a: Action): State {
   if (a.t === "undo") return state.undo ? { ...state.undo.prev, undo: undefined } : state;
@@ -313,6 +427,7 @@ export function rebase(s: State): State {
     courts: s.courts.map((c) => (c.game ? { ...c, game: { ...c.game, startedAt: c.game.startedAt + away } } : c)),
     queue: s.queue.map((q) => ({ ...q, checkedInAt: q.checkedInAt + away, waitingSince: q.waitingSince + away })),
     notices: s.notices.map((n) => ({ ...n, at: n.at + away })),
+    courtWaitlist: days ? s.courtWaitlist.map((w) => ({ ...w, date: shiftYmd(w.date, days)! })) : s.courtWaitlist,
   };
 }
 

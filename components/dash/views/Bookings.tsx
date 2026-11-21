@@ -232,6 +232,11 @@ function Calendar({
             ))}
             {bookings
               .filter((b) => b.courtId === c.courtId && b.date === c.date)
+              // a cancelled slot that has been re-booked is hidden behind the new booking
+              .filter(
+                (b, _i, all) =>
+                  b.status !== "cancelled" || !all.some((o) => o.status !== "cancelled" && o.start < b.start + b.duration && b.start < o.start + o.duration),
+              )
               .map((b) => {
                 const p = state.players.find((x) => x.id === b.playerId);
                 return (
