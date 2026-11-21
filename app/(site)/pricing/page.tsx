@@ -8,7 +8,7 @@ import { PricingPlans } from "@/components/PricingPlans";
 export const metadata: Metadata = {
   title: "Pricing: Plans for Pickleball Clubs & Facilities",
   description:
-    "Flat monthly pricing for pickleball club software. Rally from $39/mo, Club from $99/mo, Facility from $239/mo. No per-booking fees, 14-day free trial.",
+    "Flat monthly pricing for pickleball club software. Rally from $39/mo, Club from $99/mo, Facility from $239/mo billed yearly. No per-booking fees, 14-day free trial.",
   alternates: { canonical: "/pricing" },
   openGraph: { url: "/pricing", title: "MyPickleball Pricing" },
 };
@@ -19,10 +19,10 @@ const rows: { group: string; items: [string, Cell, Cell, Cell][] }[] = [
     group: "Courts & booking",
     items: [
       ["Courts", "Up to 4", "Up to 12", "Unlimited"],
-      ["Locations", "1", "1", "Unlimited"],
+      ["Day & week court calendar", true, true, true],
       ["Online booking & waitlists", true, true, true],
       ["Peak / off-peak pricing", true, true, true],
-      ["Recurring & block bookings", false, true, true],
+      ["Recurring weekly bookings", true, true, true],
     ],
   },
   {
@@ -31,27 +31,26 @@ const rows: { group: string; items: [string, Cell, Cell, Cell][] }[] = [
       ["Check-in & live queue", true, true, true],
       ["Play-time tracking & timers", true, true, true],
       ["TV court board", true, true, true],
-      ["Skill-balanced rotation", false, true, true],
+      ["Skill-balanced rotation", true, true, true],
     ],
   },
   {
     group: "Programs",
     items: [
       ["Coach scheduling & lessons", false, true, true],
-      ["Clinics, camps & lesson packs", false, true, true],
+      ["Clinics, camps & waitlists", false, true, true],
       ["Leagues, ladders & round robins", false, true, true],
-      ["Tournament brackets & live scoring", false, false, true],
+      ["Online event registration", false, true, true],
     ],
   },
   {
     group: "Business",
     items: [
-      ["Card & wallet payments", true, true, true],
-      ["Memberships & punch passes", false, true, true],
+      ["Quick sale, refunds & CSV export", true, true, true],
+      ["Memberships & renewals", false, true, true],
       ["Staff roles", "2 seats", "15 seats", "Unlimited"],
-      ["Reports", "Basic", "Advanced", "Advanced + export"],
-      ["Lights & door access", false, false, true],
-      ["Branded player app", false, false, true],
+      ["Reports", "Revenue", "Full", "Full"],
+      ["Court light controls", false, false, true],
       ["Support", "Email", "Email + chat", "Named success lead"],
     ],
   },

@@ -11,7 +11,7 @@ export function Faq({ title = "Questions club owners ask us" }: { title?: string
             {title}
           </h2>
           <p className="lead" style={{ marginTop: 24 }}>
-            Still unsure? Our team has run front desks on busy Saturday mornings. Ask us anything.
+            Still unsure? Ask us anything, or open the live demo and try it yourself.
           </p>
         </div>
         <div className="faq-list" data-reveal style={{ ["--d" as string]: ".1s" }}>

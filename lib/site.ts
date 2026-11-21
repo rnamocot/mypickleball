@@ -3,7 +3,7 @@ export const site = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://mypickleball.app",
   tagline: "Pickleball club management software",
   description:
-    "MyPickleball is the all-in-one pickleball club management software for court bookings, open play queues, coaching, memberships, leagues and payments, built by people who run real courts.",
+    "MyPickleball is the all-in-one pickleball club management software for court bookings, open play queues, coaching, memberships, leagues and payments, in one dashboard for owners, organizers, coaches and the front desk.",
   email: "hello@mypickleball.app",
   phone: "+1 (555) 014-2290",
   social: {
@@ -44,11 +44,11 @@ export const plans: Plan[] = [
     blurb: "For a single venue getting off paper and group chats.",
     courts: "Up to 4 courts",
     features: [
-      "Online court booking & waitlists",
+      "Court calendar, online booking & waitlists",
       "Open play queue with play-time tracking",
-      "Player profiles & DUPR-style ratings",
-      "Card & wallet payments",
-      "Email + SMS reminders",
+      "TV court board for your facility",
+      "Player profiles & skill ratings",
+      "Front-desk quick sale & refunds",
     ],
     cta: "Start free trial",
   },
@@ -61,10 +61,10 @@ export const plans: Plan[] = [
     courts: "Up to 12 courts",
     features: [
       "Everything in Rally",
-      "Memberships, passes & packages",
-      "Coach scheduling, lessons & clinics",
+      "Memberships & renewals",
+      "Coach schedules, lessons & clinics",
       "Leagues, ladders & round robins",
-      "Staff roles, shifts & front-desk mode",
+      "Staff roles, shifts & permissions",
       "Revenue & utilization reports",
     ],
     cta: "Start free trial",
@@ -75,40 +75,49 @@ export const plans: Plan[] = [
     name: "Facility",
     monthly: 299,
     yearly: 239,
-    blurb: "For multi-site operators and tournament hosts.",
-    courts: "Unlimited courts & locations",
+    blurb: "For large facilities and clubs that run big events.",
+    courts: "Unlimited courts",
     features: [
       "Everything in Club",
-      "Multi-location dashboard",
-      "Tournament brackets & live scoring",
-      "Court lighting & door access hooks",
-      "Custom branded player app",
+      "Unlimited staff seats",
+      "Court light controls",
       "Priority onboarding & a named success lead",
+      "First access to new modules as they ship",
     ],
     cta: "Talk to sales",
   },
 ];
 
+/** Shown on the features page so the site never promises what isn't built yet. */
+export const roadmap = [
+  { t: "Email & SMS reminders", d: "Automatic booking reminders and waitlist alerts." },
+  { t: "QR check-in & waivers", d: "Players scan in at the door and sign waivers once." },
+  { t: "Tournament brackets", d: "Single and double elimination with live scoring." },
+  { t: "Passes & packages", d: "Punch passes, lesson packs and gift cards." },
+  { t: "Multi-location", d: "One login and one report across every site you run." },
+  { t: "Integrations", d: "Stripe payouts, DUPR ratings, door access and accounting exports." },
+];
+
 export const faqs = [
   {
     q: "How long does it take to set up MyPickleball?",
-    a: "Most clubs are taking bookings the same day. Add your courts, set your hours and prices, and share your booking link. Our team will import your existing members and passes for free on Club and Facility plans.",
+    a: "You can add your courts, set your hours and prices and share your booking page in one sitting. On the Club and Facility plans we import your existing members for you.",
   },
   {
-    q: "Can players book and pay from their phone?",
-    a: "Yes. Players book courts, join open play, sign up for clinics and pay from any phone, no app download required. A branded app is available on the Facility plan.",
+    q: "Can players book from their phone?",
+    a: "Yes. Your club gets a player booking page that works on any phone, with no app to download. Players book courts, join open play, sign up for clinics and events, and join waitlists when something is full.",
   },
   {
     q: "How does the open play queue work?",
-    a: "Players check in at the desk or by QR code and join a live queue. MyPickleball rotates groups onto courts fairly, tracks each player's time on court and shows who's up next on a TV display.",
+    a: "Players check in at the desk and join a live queue. MyPickleball sends groups of four onto open courts, either first come or balanced by skill, gives priority to whoever has played the fewest games, tracks each player's time on court and shows who's up next on a TV court board.",
   },
   {
     q: "Do you charge a fee per booking?",
-    a: "No per-booking fees from us. You pay a flat monthly plan, plus standard card processing from your payment provider.",
+    a: "No. You pay a flat monthly plan. Card processing is charged separately by your payment provider.",
   },
   {
     q: "Can I manage coaches and staff?",
-    a: "Yes. Give coaches, front-desk staff and managers their own roles and permissions. Coaches manage their availability, lessons and payouts; staff run check-ins and the queue.",
+    a: "Yes. Owners, managers, coaches and front-desk staff each get their own role. Coaches run their sessions and rosters; desk staff handle check-in, the queue and quick sales.",
   },
   {
     q: "Is there a free trial?",

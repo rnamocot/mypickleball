@@ -17,10 +17,10 @@ const cols = [
   {
     title: "Product",
     links: [
-      { href: "/features#courts", label: "Court booking" },
-      { href: "/features#open-play", label: "Open play queue" },
-      { href: "/features#coaching", label: "Coaching & clinics" },
-      { href: "/features#leagues", label: "Leagues & tournaments" },
+      { href: "/features/pickleball-court-booking-software", label: "Court booking" },
+      { href: "/features/pickleball-open-play-management", label: "Open play queue" },
+      { href: "/features/pickleball-coaching-scheduling", label: "Coaching & clinics" },
+      { href: "/features/pickleball-league-management", label: "Leagues & round robins" },
       { href: "/pricing", label: "Pricing" },
     ],
   },
@@ -51,7 +51,7 @@ export function Footer() {
         <div className="footer-top">
           <div className="footer-brand">
             <Logo />
-            <p>Court booking, open play, coaching and payments for pickleball clubs, made by people who run courts.</p>
+            <p>Court booking, open play, coaching and payments for pickleball clubs, in one calm dashboard.</p>
             <Newsletter />
             <div className="socials">
               {socials.map(({ href, label, Icon }) => (

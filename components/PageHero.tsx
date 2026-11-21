@@ -11,7 +11,9 @@ export function PageHero({
   dim,
   lead,
   children,
+  parent,
 }: {
+  parent?: { label: string; href: string };
   crumb: string;
   path: string;
   title: string;
@@ -30,6 +32,12 @@ export function PageHero({
         <nav className="crumbs fade-up" style={{ ["--d" as string]: "0s" }} aria-label="Breadcrumb">
           <Link href="/">Home</Link>
           <span aria-hidden="true">/</span>
+          {parent && (
+            <>
+              <Link href={parent.href}>{parent.label}</Link>
+              <span aria-hidden="true">/</span>
+            </>
+          )}
           <span aria-current="page" style={{ color: "var(--muted)" }}>
             {crumb}
           </span>
@@ -56,7 +64,8 @@ export function PageHero({
           "@type": "BreadcrumbList",
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Home", item: site.url },
-            { "@type": "ListItem", position: 2, name: crumb, item: `${site.url}${path}` },
+            ...(parent ? [{ "@type": "ListItem", position: 2, name: parent.label, item: `${site.url}${parent.href}` }] : []),
+            { "@type": "ListItem", position: parent ? 3 : 2, name: crumb, item: `${site.url}${path}` },
           ],
         }}
       />

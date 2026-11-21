@@ -1,29 +1,31 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { CtaBand } from "@/components/CtaBand";
+import { IconArrow } from "@/components/Icons";
 import { PageHero } from "@/components/PageHero";
 import { img } from "@/lib/images";
 
 export const metadata: Metadata = {
-  title: "Our Story: Built by Pickleball Club Owners",
+  title: "Our Story: Software Built Around How Pickleball Clubs Run",
   description:
-    "MyPickleball was built inside a real 10-court pickleball club by its owner, organizers, coaches and desk staff. Here's why we made it and what we believe.",
+    "Why MyPickleball exists, what we believe about running a pickleball club, and how we decide what to build next.",
   alternates: { canonical: "/about" },
   openGraph: { url: "/about", title: "The story behind MyPickleball" },
 };
 
 const values = [
-  { t: "Court-tested first", d: "Every feature runs at our own club for a month before it ships to yours." },
-  { t: "Fair play, by design", d: "Queues, rotations and waitlists should feel fair to the newest player and the 5.0." },
-  { t: "Calm software", d: "Fewer clicks at the desk, fewer notifications for players, no clutter for owners." },
-  { t: "Your players, your data", d: "No marketplace poaching, no per-booking fees. Export everything, any time." },
+  { t: "Built around the court", d: "Doubles, rotations, skill levels and the kitchen-line culture are the starting point, not an afterthought." },
+  { t: "Fair play, by design", d: "Queues, rotations and waitlists should feel fair to the newest player and the 5.0 alike." },
+  { t: "Calm software", d: "Fewer clicks at the desk, fewer pings for players, and no clutter for owners." },
+  { t: "Your players, your data", d: "No marketplace poaching and no per-booking fees. Export everything, any time." },
 ];
 
-const team = [
-  { i: "MV", n: "Marisol Vega", r: "Founder · Club owner" },
-  { i: "TB", n: "Theo Brooks", r: "Head of product · League organizer" },
-  { i: "DK", n: "Dana Kim", r: "Coaching lead · PPR certified" },
-  { i: "AR", n: "Andre Reyes", r: "Engineering · Desk volunteer" },
+const who = [
+  { t: "Owners", d: "Revenue, utilization and the whole facility on one screen." },
+  { t: "Organizers", d: "Round robins, ladders and leagues without the spreadsheet." },
+  { t: "Coaches", d: "Clinics that fill, rosters that stay current, payouts you can see." },
+  { t: "Front desk", d: "Check-in, the queue and quick sales in a few taps." },
 ];
 
 export default function AboutPage() {
@@ -32,9 +34,9 @@ export default function AboutPage() {
       <PageHero
         crumb="Our story"
         path="/about"
-        title="We built it because"
-        dim="we needed it."
-        lead="MyPickleball started at the front desk of our own club: 10 courts, 600 members and a whiteboard that couldn't keep up."
+        title="Pickleball grew fast."
+        dim="Club software didn't keep up."
+        lead="MyPickleball exists because running a pickleball club means juggling courts, queues, coaches and members, and the tools most clubs use were built for something else."
       />
 
       <section className="section-tight" aria-labelledby="story-title">
@@ -47,19 +49,18 @@ export default function AboutPage() {
               From clipboard to court board.
             </h2>
             <p data-reveal>
-              In 2021 we turned an old warehouse into an indoor pickleball club. Within six months we had
-              <strong> a waitlist for open play, three coaches sharing one spreadsheet, and four different apps</strong> for
-              booking, payments, leagues and messaging.
+              Most clubs start the same way: a booking spreadsheet, a group chat for open play and a payment app for
+              everything else. It works until it doesn&apos;t, usually on a packed Saturday morning with
+              <strong> paddles stacked on the fence and nobody sure who&apos;s next.</strong>
             </p>
             <p data-reveal>
-              Saturday mornings were chaos. Paddles stacked on the fence, players arguing about who was next, coaches
-              double-booked on Court 2. Nothing we tried was made for how pickleball actually works:
-              <strong> doubles, rotations, skill levels and a community that wants to play, not wait.</strong>
+              General booking tools treat a pickleball court like a meeting room. They don&apos;t understand
+              <strong> doubles, rotations, skill levels, or a community that wants to play rather than wait.</strong>
             </p>
             <p data-reveal>
-              So our desk volunteer, who happened to be a software engineer, started building. Today MyPickleball runs
-              <strong> more than 1,200 clubs</strong>, from two-court community parks to multi-site facilities hosting
-              national tournaments. We still run our own club on it every single day.
+              So we&apos;re building one system for the whole club: courts, open play, coaching, leagues, memberships,
+              payments and staff, sharing one player list. <strong>Every screen starts from a real job</strong> someone
+              does at a club, and we ship features in the order clubs ask for them.
             </p>
 
             <div className="values">
@@ -74,31 +75,33 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="section" aria-labelledby="team-title">
+      <section className="section" aria-labelledby="who-title">
         <div className="wrap">
           <div className="section-head">
-            <h2 id="team-title" className="h2" data-reveal>
-              Owners, organizers, coaches and engineers.
+            <h2 id="who-title" className="h2" data-reveal>
+              Made for everyone who keeps a club running.
             </h2>
             <p className="lead" data-reveal style={{ ["--d" as string]: ".1s" }}>
-              Everyone on our team has worked a shift at the desk. It shows in the product.
+              Each role gets the screens it needs, and nothing it doesn&apos;t.
             </p>
           </div>
           <div className="team">
-            {team.map((m, i) => (
-              <div className="member" key={m.n} data-reveal style={{ ["--d" as string]: `${i * 0.08}s` }}>
-                <span className="av" aria-hidden="true">
-                  {m.i}
-                </span>
-                <b>{m.n}</b>
-                <span>{m.r}</span>
+            {who.map((m, i) => (
+              <div className="member" key={m.t} data-reveal style={{ ["--d" as string]: `${i * 0.08}s` }}>
+                <b style={{ marginTop: 0, fontSize: 18 }}>{m.t}</b>
+                <span style={{ display: "block", marginTop: 8 }}>{m.d}</span>
               </div>
             ))}
           </div>
+          <p style={{ marginTop: 40 }} data-reveal>
+            <Link href="/dashboard" className="text-link">
+              Explore the live demo <IconArrow size={18} />
+            </Link>
+          </p>
         </div>
       </section>
 
-      <CtaBand title="Come play on our courts, or bring us to yours." />
+      <CtaBand title="Bring MyPickleball to your courts." />
     </>
   );
 }

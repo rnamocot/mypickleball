@@ -34,7 +34,7 @@ export default async function SignupPage({
           </p>
           {!signin && (
             <ul className="check-list" style={{ marginTop: 32 }}>
-              {["Add courts, hours and prices", "Share your booking link the same day", "Free member import from any tool"].map(
+              {["Add courts, hours and prices", "Share your player booking page", "Try everything on a sample club first"].map(
                 (p) => (
                   <li key={p}>
                     <IconCheck size={18} />

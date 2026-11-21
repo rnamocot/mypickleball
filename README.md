@@ -28,3 +28,7 @@ Open http://localhost:3000 for the site and http://localhost:3000/dashboard for 
 Set `NEXT_PUBLIC_SITE_URL` to your production domain for canonical URLs, sitemap and Open Graph tags.
 
 Photos: Unsplash (free license).
+
+## Contact and newsletter forms
+
+Forms post to `app/api/contact/route.ts`. Copy `.env.example` to `.env.local` and set `RESEND_API_KEY`, `CONTACT_TO` and `CONTACT_FROM` to deliver them by email through [Resend](https://resend.com). Without those keys, submissions are logged on the server.

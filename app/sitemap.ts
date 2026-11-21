@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { featurePages } from "@/lib/features";
 import { site } from "@/lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -13,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ["/privacy", 0.3, "yearly"],
     ["/terms", 0.3, "yearly"],
   ];
+  for (const p of featurePages) pages.splice(2, 0, [`/features/${p.slug}`, 0.8, "monthly"]);
   return pages.map(([path, priority, changeFrequency]) => ({
     url: `${site.url}${path}`,
     lastModified: now,

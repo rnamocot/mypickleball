@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
-import { IconMail, IconPhone, IconPin } from "@/components/Icons";
+import { IconMail, IconPhone } from "@/components/Icons";
 import { PageHero } from "@/components/PageHero";
 import { site } from "@/lib/site";
 
@@ -26,8 +26,8 @@ export default function ContactPage() {
           <div data-reveal>
             <h2 className="h3">What you get in a demo</h2>
             <p className="lead" style={{ marginTop: 14, fontSize: 17 }}>
-              We&apos;ll set up your actual courts, run a mock open play session and show the dashboard your desk will use
-              on day one.
+              We&apos;ll set up your courts, run a sample open play session and walk through the dashboard your desk will
+              use on day one.
             </p>
             <div className="contact-lines">
               <a href={`mailto:${site.email}`}>
@@ -44,13 +44,6 @@ export default function ContactPage() {
                   {site.phone}
                 </span>
               </a>
-              <div>
-                <IconPin />
-                <span>
-                  <small>Home court</small>
-                  Austin, Texas
-                </span>
-              </div>
             </div>
           </div>
           <div className="contact-card" data-reveal style={{ ["--d" as string]: ".1s" }}>

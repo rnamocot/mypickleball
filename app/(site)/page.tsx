@@ -19,6 +19,7 @@ import { Split } from "@/components/Motion";
 import { PricingPlans } from "@/components/PricingPlans";
 import { RallyBackground } from "@/components/RallyBackground";
 import { RoleTabs, type Role } from "@/components/RoleTabs";
+import { LogoMark } from "@/components/Logo";
 import { img } from "@/lib/images";
 
 export const metadata = {
@@ -30,39 +31,39 @@ const roles: Role[] = [
     id: "owner",
     name: "Owners",
     summary: "See every court, every dollar and every member from one screen, on Saturday morning or from the beach.",
-    points: ["Live utilization and revenue by court", "Dynamic peak and off-peak pricing", "Multi-location view on Facility"],
+    points: ["Live court status and revenue today", "Peak and off-peak pricing with member rates", "Court utilization heatmap by hour"],
     image: img.nightCourts,
     alt: "Aerial view of two floodlit pickleball courts at night",
   },
   {
     id: "organizer",
     name: "Organizers",
-    summary: "Spin up round robins, ladders and leagues in minutes. Brackets, partners and standings handle themselves.",
-    points: ["Skill-balanced round robins", "League schedules with auto-standings", "Tournament brackets with live scores"],
+    summary: "Spin up round robins, ladders and leagues in minutes. Partners rotate and standings update as scores come in.",
+    points: ["Round robins with rotating partners", "League and ladder standings", "Score entry from the desk or courtside"],
     image: img.aerialPlay,
     alt: "Aerial view of doubles pickleball games on two blue courts",
   },
   {
     id: "coach",
     name: "Coaches",
-    summary: "Publish availability, sell lesson packs and run clinics without chasing a single Venmo request.",
-    points: ["Private, semi-private and clinic booking", "Lesson packs and automatic payouts", "Player notes and progress tracking"],
+    summary: "Publish privates, clinics and camps, manage rosters and see what every session earns.",
+    points: ["Privates, clinics and camps", "Rosters with capacity and waitlists", "Payout totals for every session"],
     image: img.duoPlayers,
     alt: "Two players touching pickleball paddles before a match",
   },
   {
     id: "desk",
     name: "Front desk",
-    summary: "QR check-in, a fair open play queue and a court board on the TV. The busiest hour becomes the calmest.",
-    points: ["One-tap check-in and walk-in payments", "Automatic court rotation with play-time limits", "TV display of who's on and who's next"],
+    summary: "Fast check-in, a fair open play queue and a court board on the TV. The busiest hour becomes the calmest.",
+    points: ["Name or phone check-in, drop-ins charged automatically", "Automatic court rotation with play-time limits", "TV display of who's on and who's next"],
     image: img.playerAction,
     alt: "Pickleball player lunging for a forehand at sunset",
   },
   {
     id: "players",
     name: "Players",
-    summary: "Book a court, join open play or grab a clinic spot from any phone in under 30 seconds.",
-    points: ["Book and pay without downloading an app", "Find partners at your skill level", "Waitlists that notify you instantly"],
+    summary: "Book a court, join open play or grab a clinic spot from any phone.",
+    points: ["Book without downloading an app", "Join open play and see your place in line", "Waitlists for full clinics and events"],
     image: img.paddleBalls,
     alt: "Pickleball paddle resting on neon yellow balls by the net",
   },
@@ -75,7 +76,7 @@ const ticker = [
   { Icon: IconWallet, b: "$480", t: "in memberships renewed today" },
   { Icon: IconTrophy, b: "Spring ladder", t: "round 4 standings published" },
   { Icon: IconTimer, b: "Court 1", t: "3 minutes left, next group notified" },
-  { Icon: IconPlayers, b: "Jamie M.", t: "found a 3.5 doubles partner" },
+  { Icon: IconPlayers, b: "Jamie M.", t: "joined the 6 PM clinic waitlist" },
 ];
 
 export default function Home() {
@@ -143,10 +144,10 @@ export default function Home() {
 
           <div className="hero-stats">
             {[
-              { n: "1200", s: "+", l: "Clubs and facilities" },
-              { n: "3.4", s: "M", l: "Games scheduled a year" },
-              { n: "38", s: "%", l: "Fewer no-shows" },
-              { n: "9", s: " hrs", l: "Saved at the desk weekly" },
+              { n: "16", s: "", l: "Modules in one dashboard" },
+              { n: "0", s: "%", l: "Per-booking fees" },
+              { n: "14", s: " days", l: "Free trial, no card" },
+              { n: "5", s: " roles", l: "From owner to player" },
             ].map((s, i) => (
               <div key={s.l} data-reveal style={{ ["--d" as string]: `${0.9 + i * 0.08}s` }}>
                 <div className="stat-num">
@@ -161,7 +162,7 @@ export default function Home() {
       </section>
 
       {/* ---------- LIVE TICKER ---------- */}
-      <div className="ticker" aria-label="Recent activity across MyPickleball clubs">
+      <div className="ticker" aria-label="Example activity on a club's MyPickleball dashboard">
         <div className="ticker-track">
           {[...ticker, ...ticker].map(({ Icon, b, t }, i) => (
             <span className="ticker-item" key={i} aria-hidden={i >= ticker.length}>
@@ -182,8 +183,8 @@ export default function Home() {
               Built for everyone who keeps the courts busy.
             </h2>
             <p className="lead" data-reveal style={{ ["--d" as string]: ".1s" }}>
-              We run a 10-court club ourselves. Every screen was shaped by an owner, an organizer, a coach or a desk
-              volunteer on a packed Saturday.
+              Every screen is built around a real job on a packed Saturday: the owner watching the numbers, the organizer
+              running a ladder, the coach filling a clinic and the desk keeping the line moving.
             </p>
           </div>
           <div data-reveal>
@@ -238,7 +239,7 @@ export default function Home() {
                 bookable from any phone.
               </p>
               <ul className="check-list">
-                {["Member, guest and drop-in pricing", "Recurring and block bookings", "Smart waitlists that fill cancellations"].map((p) => (
+                {["Member, guest and drop-in pricing", "Recurring weekly bookings", "Waitlists for full sessions"].map((p) => (
                   <li key={p}>
                     <IconCheck size={18} />
                     <span>{p}</span>
@@ -329,11 +330,11 @@ export default function Home() {
               <div className="feature-index">03</div>
               <h3>Coaching, clinics and camps, fully booked.</h3>
               <p className="lead">
-                Coaches set their own availability and prices. Players book privates, join clinics or buy lesson packs.
-                Payouts and court holds happen automatically.
+                Coaches publish privates, clinics and camps on their own courts. Players sign up online, rosters fill
+                to capacity and everyone can see what each session earns.
               </p>
               <ul className="check-list">
-                {["Coach profiles with ratings and specialties", "Lesson packs, clinics and multi-week camps", "Automatic coach payouts and commission splits"].map((p) => (
+                {["Coach profiles with ratings and specialties", "Privates, clinics and camps", "Payout totals for every session"].map((p) => (
                   <li key={p}>
                     <IconCheck size={18} />
                     <span>{p}</span>
@@ -376,11 +377,11 @@ export default function Home() {
               <div className="feature-index">04</div>
               <h3>Memberships and payments on autopilot.</h3>
               <p className="lead">
-                Sell memberships, punch passes and drop-ins. Card on file, auto-renewals and clean reports that tell you
-                which hours, courts and programs actually make money.
+                Sell memberships and drop-ins, take quick sales at the desk and see which hours, courts and programs
+                actually make money.
               </p>
               <ul className="check-list">
-                {["Recurring memberships and punch passes", "Card, Apple Pay and Google Pay", "Revenue, utilization and retention reports"].map((p) => (
+                {["Membership plans with renewal tracking", "Quick sales, refunds and CSV export", "Revenue and court utilization reports"].map((p) => (
                   <li key={p}>
                     <IconCheck size={18} />
                     <span>{p}</span>
@@ -396,23 +397,23 @@ export default function Home() {
       </section>
 
       {/* ---------- QUOTE ---------- */}
-      <section className="bleed" aria-label="Customer story">
+      <section className="bleed" aria-label="Our promise">
         <div className="bleed-img" data-parallax="0.12">
           <Image src={img.nightCourts} alt="" fill sizes="100vw" placeholder="blur" style={{ objectPosition: "center 40%" }} />
         </div>
         <div className="wrap quote">
           <figure data-reveal>
             <blockquote>
-              “We used to run open play off a clipboard and a whistle.{" "}
-              <span className="q-dim">Now the queue runs itself, our coaches are booked solid, and I get my Saturdays back.”</span>
+              Open play shouldn&apos;t need a clipboard and a whistle.{" "}
+              <span className="q-dim">Players should know when they&apos;re up, coaches should fill their clinics, and owners should get their Saturdays back.</span>
             </blockquote>
             <figcaption>
-              <span className="quote-mark" aria-hidden="true">
-                MV
+              <span className="quote-mark" aria-hidden="true" style={{ background: "var(--surface-2)", border: "1px solid var(--line-2)" }}>
+                <LogoMark size={26} />
               </span>
               <span className="who">
-                <b>Marisol Vega</b>
-                <span>Owner, Dink District · 8 indoor courts</span>
+                <b>The MyPickleball promise</b>
+                <span>Why we build every screen the way we do</span>
               </span>
             </figcaption>
           </figure>
@@ -424,22 +425,22 @@ export default function Home() {
         <div className="wrap">
           <div className="section-head">
             <h2 id="outcomes-title" className="h2" data-reveal>
-              What changes in the first 90 days.
+              A Saturday morning, run by MyPickleball.
             </h2>
             <p className="lead" data-reveal style={{ ["--d" as string]: ".1s" }}>
-              Averages across clubs that moved to MyPickleball from spreadsheets, group chats or older booking tools.
+              Here&apos;s how the busiest morning of the week runs once the queue, the courts and the desk share one system.
             </p>
           </div>
           <div className="outcomes">
             {[
-              { n: "27", s: "%", p: "More booked court hours, mostly in off-peak slots filled by waitlists and dynamic pricing." },
-              { n: "38", s: "%", p: "Fewer no-shows thanks to reminders, card-on-file and automatic cancellation fees." },
-              { n: "4.9", s: "/5", p: "Average player rating for booking and open play check-in on mobile." },
+              { n: "7:45", s: "am", p: "Players check in at the desk. Members join the queue for free and drop-ins pay in one tap." },
+              { n: "8:00", s: "am", p: "Groups of four head to open courts. Timers start and the TV board shows who's up next." },
+              { n: "9:30", s: "am", p: "A clinic spot opens up and the next player on the waitlist gets it. The desk never touches it." },
             ].map((o, i) => (
               <div className="outcome" key={o.p} data-reveal style={{ ["--d" as string]: `${i * 0.1}s` }}>
                 <div className="stat-num">
-                  <span data-count={o.n}>0</span>
-                  <em>{o.s}</em>
+                  {o.n}
+                  <em> {o.s}</em>
                 </div>
                 <p>{o.p}</p>
               </div>
